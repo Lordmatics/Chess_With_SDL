@@ -1,0 +1,28 @@
+#include "NMSprite.h"
+#include "SDL_surface.h"
+#include "SDL_render.h"
+#include "SDL_image.h"
+#include <iostream>
+
+NMSprite::NMSprite(SDL_Renderer* pRenderer, const char* path)
+{
+	SDL_Surface* pTMPSurface = IMG_Load(path);
+	if (!pTMPSurface)
+	{
+		// TODO: ERROR
+		std::cout << "Failed to Load Image: " << path << std::endl;
+		return;
+	}
+	m_pTexture = SDL_CreateTextureFromSurface(pRenderer, pTMPSurface);
+	SDL_FreeSurface(pTMPSurface);
+}
+
+NMSprite::~NMSprite()
+{	
+	SDL_DestroyTexture(m_pTexture);
+}
+
+SDL_Texture* NMSprite::GetTexture() const
+{
+	return m_pTexture;
+}
