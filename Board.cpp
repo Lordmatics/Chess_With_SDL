@@ -18,6 +18,24 @@ std::map<Board::Piece, Board::PiecePaths> Board::m_pieceMap =
 	{ Board::Piece::Queen, { "Assets/Images/w_queen.png", "Assets/Images/b_queen.png"} },
 };
 
+apiObject* Board::GetTileAtPoint(SDL_Point* point)
+{
+
+	for (int i = 0; i < m_iRows; i++)
+	{
+		for (int j = 0; j < m_iColumns; j++)
+		{
+			apiObject& object = m_board[i][j];
+			SDL_Rect& rect = object.GetTransform();
+			if (SDL_PointInRect(point, &rect))
+			{
+				return &object;
+			}
+		}
+	}
+	return nullptr;
+}
+
 Board::Board()
 {
 
@@ -40,12 +58,10 @@ void Board::Init(SDL_Renderer* pRenderer)
 	const int tileSize = 128;
 	const int xOffset = 896 / 2; // Quarter X Reso
 	const int yOffset = 28; // Each tile is 128, so 128 * 8 = 1024. reso = 1920:1080, so 1080 - 1024 = 56, then half top/bot, so 28 each side
-
-	const int rows = 8;
-	const int columns = 8;
-	for (int i = 0; i < rows; i++)
+	
+	for (int i = 0; i < m_iRows; i++)
 	{
-		for (int j = 0; j < columns; j++)
+		for (int j = 0; j < m_iColumns; j++)
 		{
 			apiObject& object = m_board[i][j];
 			object.SetSize(tileSize, tileSize);

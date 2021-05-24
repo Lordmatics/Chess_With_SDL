@@ -110,3 +110,18 @@ void ChessUser::Render(SDL_Renderer* pRenderer)
 		}
 	}
 }
+
+apiObject* ChessUser::GetPawns()
+{
+	return m_material[0];
+}
+
+apiObject* ChessUser::GetPieces()
+{
+	return m_material[1];
+}
+
+void ChessUser::VisitMaterial()
+{
+
+}

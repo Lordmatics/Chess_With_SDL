@@ -24,6 +24,9 @@ public:
 
 	void Render(SDL_Renderer* pRenderer);
 
+	apiObject* GetPawns();
+	apiObject* GetPieces();
+	void VisitMaterial();
 protected:
 
 	Side m_side;

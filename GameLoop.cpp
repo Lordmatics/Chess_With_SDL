@@ -135,10 +135,28 @@ void GameLoop::HandleEvents()
 		if (!m_LMBD && event.button.button == SDL_BUTTON_LEFT)
 		{
 			m_LMBD = true;
-			//TODO:
-			// Declare RECT m_gameRect; (to encompass the board)
-			// Declared RECT[][] To represent the grid
-			//SDL_PointInRect(&m_mousePosition, rect);
+			for (int i = 0; i < Board::m_iColumns ; i++)
+			{
+				apiObject& pawn = m_player.GetPawns()[i];
+				SDL_Rect* pawnTransform = &pawn.GetTransform();
+				if (SDL_PointInRect(&m_mousePosition, pawnTransform))
+				{
+					m_resetPos = pawn.GetTransform();
+					m_pSelectedRect = pawnTransform;
+					m_pSelectedObject = &pawn;
+					break;
+				}
+
+				apiObject& piece = m_player.GetPieces()[i];
+				SDL_Rect* pieceTransform = &piece.GetTransform();
+				if (SDL_PointInRect(&m_mousePosition, pieceTransform))
+				{
+					m_resetPos = piece.GetTransform();
+					m_pSelectedRect = pieceTransform;
+					m_pSelectedObject = &piece;
+					break;
+				}
+			}
 		}
 
 		volatile int i = 5;
@@ -149,19 +167,47 @@ void GameLoop::HandleEvents()
 		if (m_LMBD && event.button.button == SDL_BUTTON_LEFT)
 		{
 			m_LMBD = false;
-			m_pSelectedRect = nullptr;
-			//TODO:
-			// Declare RECT m_gameRect; (to encompass the board)
-			// Declared RECT[][] To represent the grid
-			//SDL_PointInRect(&m_mousePosition, rect);
-		}
+			
+			if (m_pSelectedRect)
+			{
+				m_pSelectedRect->x = m_resetPos.x;
+				m_pSelectedRect->y = m_resetPos.y;
+			}
 
-		volatile int i = 5;
+			m_pSelectedRect = nullptr;
+			
+			m_pSelectedObject = nullptr;
+
+		}
 		break;
 	}
 	case SDL_MOUSEMOTION:
 	{
 		m_mousePosition = { event.motion.x, event.motion.y };
+
+		// TODO: Be nice to change this to an actual texture highlight - white boarder or so.
+		if (apiObject* pTile = m_board.GetTileAtPoint(&m_mousePosition))
+		{
+			NMSprite& sprite = pTile->GetSprite();
+			if (SDL_Texture* pTexture = sprite.GetTexture())
+			{
+				if (m_pHighlightedTex && m_pHighlightedTex != pTexture)
+				{
+					SDL_SetTextureColorMod(m_pHighlightedTex, 255, 255, 255);					
+				}
+				m_pHighlightedTex = pTexture;				
+			}
+		}
+		else
+		{
+
+		}
+
+		if (m_pHighlightedTex)
+		{
+			SDL_SetTextureColorMod(m_pHighlightedTex, 178, 178, 178);
+		}
+
 		break;
 	}
 	case SDL_DROPFILE:
@@ -194,9 +240,17 @@ void GameLoop::HandleEvents()
 	}
 }
 
-void GameLoop::Process()
+void GameLoop::Process(float dt)
 {
 	m_iFrameCount++;
+
+	if (SDL_Rect* pRect = m_pSelectedRect)
+	{
+		pRect->x = m_mousePosition.x - (pRect->w /2);
+		pRect->y = m_mousePosition.y - (pRect->h / 2);
+
+		// Show Legal Moves
+	}
 }
 
 // https://opengameart.org/content/chess-pieces-and-board-squares

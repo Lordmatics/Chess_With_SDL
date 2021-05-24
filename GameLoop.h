@@ -23,7 +23,7 @@ public:
 	void CleanUp();
 
 	void HandleEvents();
-	void Process();
+	void Process(float dt);
 	void Render();
 
 private:
@@ -32,6 +32,7 @@ private:
 
 	SDL_Window* m_pGameWindow;
 	SDL_Renderer* m_pRenderer;
+	SDL_Texture* m_pHighlightedTex;
 	bool m_bIsRunning : 1;
 	bool m_bPadding : 7;
 	int m_iFrameCount;
@@ -45,5 +46,8 @@ private:
 	SDL_Point m_mousePosition;
 	SDL_Rect* m_pSelectedRect;
 	SDL_Point m_clickOffset;
+
+	SDL_Rect m_resetPos;
+	apiObject* m_pSelectedObject;
 };
 

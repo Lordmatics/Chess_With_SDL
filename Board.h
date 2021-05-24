@@ -49,6 +49,8 @@ public:
 	};
 
 	static std::map<Piece, PiecePaths> m_pieceMap;
+
+	apiObject* GetTileAtPoint(SDL_Point* point);
 private:
 	static std::map<Board::Tile, const char*> m_tileMap;
 	apiObject m_board[8][8];
