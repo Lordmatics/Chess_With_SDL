@@ -135,7 +135,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="apiObject.cpp" />
     <ClCompile Include="BasicAI.cpp" />
+    <ClCompile Include="Board.cpp" />
     <ClCompile Include="ChessUser.cpp" />
     <ClCompile Include="GameLoop.cpp" />
     <ClCompile Include="main.cpp" />
@@ -143,7 +145,9 @@
     <ClCompile Include="Player.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="apiObject.h" />
     <ClInclude Include="BasicAI.h" />
+    <ClInclude Include="Board.h" />
     <ClInclude Include="ChessUser.h" />
     <ClInclude Include="GameLoop.h" />
     <ClInclude Include="NMSprite.h" />

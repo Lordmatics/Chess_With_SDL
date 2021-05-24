@@ -3,5 +3,9 @@
 class BasicAI :
 	public ChessUser
 {
+public:
+
+	BasicAI();
+	virtual ~BasicAI();
 };
 

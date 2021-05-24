@@ -3,5 +3,9 @@
 class Player :
 	public ChessUser
 {
+public:
+
+	Player();
+	virtual ~Player();
 };
 

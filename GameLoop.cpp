@@ -3,33 +3,17 @@
 #include <iostream>
 #include "ChessUser.h"
 #include <utility>
-
-std::map<GameLoop::Piece, const char*> GameLoop::m_pieceMapB =
-{
-	{ GameLoop::Piece::Pawn, "Assets/Images/b_pawn.png" },
-	{ GameLoop::Piece::Rook, "Assets/Images/b_rook.png" },
-	{ GameLoop::Piece::Horse, "Assets/Images/b_knight.png" },
-	{ GameLoop::Piece::Bishop, "Assets/Images/b_bishop.png" },
-	{ GameLoop::Piece::King, "Assets/Images/b_king.png" },
-	{ GameLoop::Piece::Queen, "Assets/Images/b_queen.png" },
-};
-
-std::map<GameLoop::Piece, const char*> GameLoop::m_pieceMapW =
-{
-	{ GameLoop::Piece::Pawn, "Assets/Images/w_pawn.png" },
-	{ GameLoop::Piece::Rook, "Assets/Images/w_rook.png" },
-	{ GameLoop::Piece::Horse, "Assets/Images/w_knight.png" },
-	{ GameLoop::Piece::Bishop, "Assets/Images/w_bishop.png" },
-	{ GameLoop::Piece::King, "Assets/Images/w_king.png" },
-	{ GameLoop::Piece::Queen, "Assets/Images/w_queen.png" },
-};
+#include <time.h>
+#include <stdlib.h>
+#include <stdio.h>
 
 GameLoop::GameLoop() :
 	m_pGameWindow(nullptr),
 	m_pRenderer(nullptr),		
 	m_bIsRunning(1),
 	m_bPadding(0),
-	m_iFrameCount(0)
+	m_iFrameCount(0),
+	m_board()
 {
 	ConstructSDL();
 }
@@ -69,11 +53,6 @@ void GameLoop::ConstructSDL(int w, int h, bool fullscreen)
 			return;
 		SDL_SetRenderDrawColor(m_pRenderer, 255, 233, 197, 255);
 		std::cout << "SDL Renderer Created" << std::endl;
-
-		//SDL_RenderClear(m_pRenderer);
-		//SDL_RenderPresent(m_pRenderer);
-		//SDL_Delay(3000);
-
 		m_bIsRunning = true;
 	}
 	else
@@ -82,132 +61,36 @@ void GameLoop::ConstructSDL(int w, int h, bool fullscreen)
 		return;
 	}
 
-	InitChess();
-	InitPlayerAndAI();
+	m_board.Init(m_pRenderer);
 
-}
 
-void GameLoop::InitChess()
-{
-	if (SDL_Renderer* pRenderer = m_pRenderer)
+	m_players[0] = &m_player;
+	m_players[1] = &m_opponent;	
+
+	std::srand((unsigned int)time(NULL));
+	int random = std::rand() % 1;
+	if (random == 1)
 	{
-		auto CreateLightSquare = [&pRenderer]() -> const NMSprite*
-		{
-			const NMSprite* backgroundTileLight = new NMSprite(pRenderer, "Assets/Images/square brown light.png");
-			return backgroundTileLight;
-		};
-		auto CreateDarkSquare = [&pRenderer]() -> const NMSprite*
-		{
-			const NMSprite* backgroundTileDark = new NMSprite(pRenderer, "Assets/Images/square brown dark.png");
-			return backgroundTileDark;
-		};
-
-		for (const NMSprite* pSprite : m_pBackgroundTiles)
-		{
-			if (pSprite)
-			{
-				delete pSprite;
-				pSprite = nullptr;
-			}
-		}
-		m_pBackgroundTiles.clear();
-
-		const int rows = 8;
-		const int columns = 8;
-		bool light = false;
-		for (int i = 0; i < rows; i++)
-		{
-			for (int j = 0; j < columns ; j++)
-			{
-
-				if (light)
-				{
-					const NMSprite* lightSquare = CreateLightSquare();
-					m_pBackgroundTiles.push_back(lightSquare);
-					light = false;
-				}
-				else
-				{
-					const NMSprite* darkSquare = CreateDarkSquare();
-					m_pBackgroundTiles.push_back(darkSquare);
-					light = true;
-				}
-			}
-			light = !light;
-		}
-	}
-}
-
-void GameLoop::InitPlayerAndAI()
-{
-	if (SDL_Renderer* pRenderer = m_pRenderer)
-	{
-		for (const NMSprite* pSprite : m_pWhitePieces)
-		{
-			if (pSprite)
-			{
-				delete pSprite;
-				pSprite = nullptr;
-			}
-		}
-		m_pWhitePieces.clear();
-
-		// pawn x8
-		// rook/horse/bishop/queen/king/bishop/horse/rook
-		for (int i = 0; i < 8 ; i++)
-		{
-			m_pWhitePieces.push_back(CreatePiece(Piece::Pawn, Side::WHITE));
-		}
-
-		m_pWhitePieces.push_back(CreatePiece(Piece::Rook, Side::WHITE));
-		m_pWhitePieces.push_back(CreatePiece(Piece::Horse, Side::WHITE));
-		m_pWhitePieces.push_back(CreatePiece(Piece::Bishop, Side::WHITE));
-		m_pWhitePieces.push_back(CreatePiece(Piece::Queen, Side::WHITE));
-		m_pWhitePieces.push_back(CreatePiece(Piece::King, Side::WHITE));
-		m_pWhitePieces.push_back(CreatePiece(Piece::Bishop, Side::WHITE));
-		m_pWhitePieces.push_back(CreatePiece(Piece::Horse, Side::WHITE));
-		m_pWhitePieces.push_back(CreatePiece(Piece::Rook, Side::WHITE));
-
-		for (const NMSprite* pSprite : m_pBlackPieces)
-		{
-			if (pSprite)
-			{
-				delete pSprite;
-				pSprite = nullptr;
-			}
-		}
-		m_pBlackPieces.clear();
-
-		// pawn x8
-		// rook/horse/bishop/queen/king/bishop/horse/rook
-		m_pBlackPieces.push_back(CreatePiece(Piece::Rook, Side::BLACK));
-		m_pBlackPieces.push_back(CreatePiece(Piece::Horse, Side::BLACK));
-		m_pBlackPieces.push_back(CreatePiece(Piece::Bishop, Side::BLACK));
-		m_pBlackPieces.push_back(CreatePiece(Piece::Queen, Side::BLACK));
-		m_pBlackPieces.push_back(CreatePiece(Piece::King, Side::BLACK));
-		m_pBlackPieces.push_back(CreatePiece(Piece::Bishop, Side::BLACK));
-		m_pBlackPieces.push_back(CreatePiece(Piece::Horse, Side::BLACK));
-		m_pBlackPieces.push_back(CreatePiece(Piece::Rook, Side::BLACK));
-
-		for (int i = 0; i < 8; i++)
-		{
-			m_pBlackPieces.push_back(CreatePiece(Piece::Pawn, Side::BLACK));
-		}
-	}
-}
-
-const NMSprite* GameLoop::CreatePiece(Piece param1, Side side)
-{
-	NMSprite* pSprite = nullptr;
-	if (side == Side::WHITE)
-	{
-		pSprite = new NMSprite(m_pRenderer, m_pieceMapW[param1]);
+		m_player.SetWhite(true);
+		m_player.SetSide(ChessUser::Side::BOTTOM);
+		m_opponent.SetWhite(false);
+		m_opponent.SetSide(ChessUser::Side::TOP);
 	}
 	else
 	{
-		pSprite = new NMSprite(m_pRenderer, m_pieceMapB[param1]);		
+		m_player.SetWhite(false);
+		m_player.SetSide(ChessUser::Side::BOTTOM);
+		m_opponent.SetWhite(true);
+		m_opponent.SetSide(ChessUser::Side::TOP);
 	}
-	return pSprite;
+
+	for (int i = 0; i < MAX_NUM_PLAYERS; i++)
+	{
+		if (m_players[i])
+		{
+			m_players[i]->Init(m_pRenderer);
+		}
+	}
 }
 
 void GameLoop::CleanUp()
@@ -327,97 +210,16 @@ void GameLoop::Render()
 	int y = 0;
 	const int xOffset = 896 / 2;
 	const int yOffset = 25;
-	for (const NMSprite*& pSprite : m_pBackgroundTiles)
+
+	m_board.Render(m_pRenderer);
+
+	for (int i = 0; i < MAX_NUM_PLAYERS; i++)
 	{
-		if(!pSprite)
-			continue;
-
-		if (SDL_Texture* pTexture = pSprite->GetTexture())
+		if (m_players[i])
 		{
-			SDL_Rect drawRect;
-			drawRect.h = 128;
-			drawRect.w = 128;
-			drawRect.x = xOffset + ( x * 128 );
-			drawRect.y = yOffset + ( y * 128 );
-			SDL_RenderCopy(m_pRenderer, pTexture, nullptr, &drawRect);
-			x++;
-			if (x >= columns)
-			{
-				x = 0;
-				y++;
-			}
-		}
-	}
-
-	x = 0;
-	y = 6;	
-	int innerTileOffsetX = 16;
-	const int innerTileOffsetY = 16;
-	for (const NMSprite*& pSprite : m_pWhitePieces)
-	{
-		if (!pSprite)
-			continue;
-
-		if (SDL_Texture* pTexture = pSprite->GetTexture())
-		{
-			SDL_Rect drawRect;
-			drawRect.h = 96;
-			drawRect.w = y == 7 ? 96 : 76;
-			innerTileOffsetX = y == 7 ? 16 : 26;
-			drawRect.x = xOffset + innerTileOffsetX + (x * 128);
-			drawRect.y = yOffset + innerTileOffsetY + (y * 128);
-			SDL_RenderCopy(m_pRenderer, pTexture, nullptr, &drawRect);
-			x++;
-			if (x >= columns)
-			{
-				x = 0;
-				y++;
-			}
-		}
-	}
-
-	x = 0;
-	y = 0;
-	for (const NMSprite*& pSprite : m_pBlackPieces)
-	{
-		if (y >= 2)
-			break;
-
-		if (!pSprite)
-			continue;
-
-		if (SDL_Texture* pTexture = pSprite->GetTexture())
-		{
-			SDL_Rect drawRect;
-			drawRect.h = 96;
-			drawRect.w = 96;
-
-			drawRect.w = y == 0 ? 96 : 76;
-			innerTileOffsetX = y == 0 ? 16 : 26;
-
-			drawRect.x = xOffset + innerTileOffsetX + (x * 128);
-			drawRect.y = yOffset + innerTileOffsetY + (y * 128);
-			SDL_RenderCopy(m_pRenderer, pTexture, nullptr, &drawRect);
-			x++;
-			if (x >= columns)
-			{
-				x = 0;
-				y++;
-			}
+			m_players[i]->Render(m_pRenderer);
 		}
 	}
 
 	SDL_RenderPresent(m_pRenderer);
-}
-
-void GameLoop::AddPlayer(ChessUser* user, bool isWhite)
-{
-	Side side = isWhite ? Side::WHITE : Side::BLACK;
-	m_pPlayer = { user, side };
-}
-
-void GameLoop::AddAI(ChessUser* ai, bool isWhite)
-{
-	Side side = isWhite ? Side::WHITE : Side::BLACK;
-	m_pAI = { ai, side };
 }
