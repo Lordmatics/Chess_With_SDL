@@ -1,6 +1,10 @@
 #include "apiObject.h"
+#include <iostream>
 
-apiObject::apiObject()
+apiObject::apiObject() :
+	m_graphic(),
+	m_transform(),
+	m_boardCoordinate()
 {
 
 }
@@ -26,8 +30,26 @@ void apiObject::SetPos(int x, int y)
 	m_transform.y = y;
 }
 
+void apiObject::SetCoord(Coordinate coord)
+{
+	m_boardCoordinate = coord;
+}
+
+void apiObject::SetCoord(int x, int y)
+{
+	m_boardCoordinate.m_x = x;
+	m_boardCoordinate.m_y = y;
+}
+
 void apiObject::SetSize(int w, int h)
 {
 	m_transform.w = w;
 	m_transform.h = h;
+}
+
+void apiObject::Debug()
+{
+	SDL_Rect& rect = GetTransform();
+	std::cout << "X: " << rect.x << " (" << m_boardCoordinate.m_x << ") " << "\t";
+	std::cout << "Y: " << rect.y << " (" << m_boardCoordinate.m_y << ") " << std::endl;
 }

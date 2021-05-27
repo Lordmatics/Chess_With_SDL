@@ -4,12 +4,14 @@
 #include "SDL_image.h"
 #include <iostream>
 
-NMSprite::NMSprite()
+NMSprite::NMSprite() :
+	m_spriteResourceFilePath("")
 {
 
 }
 
-NMSprite::NMSprite(SDL_Renderer* pRenderer, const char* path)
+NMSprite::NMSprite(SDL_Renderer* pRenderer, const char* path) :
+	m_spriteResourceFilePath(path)
 {
 	AssignSprite(pRenderer, path);
 }
@@ -33,6 +35,7 @@ void NMSprite::AssignSprite(SDL_Renderer* pRenderer, const char* path)
 		std::cout << "Failed to Load Image: " << path << std::endl;
 		return;
 	}
+	m_spriteResourceFilePath = path;
 	m_pTexture = SDL_CreateTextureFromSurface(pRenderer, pTMPSurface);
 	SDL_FreeSurface(pTMPSurface);
 }

@@ -22,13 +22,13 @@ public:
 	bool IsRunning() const;
 	void CleanUp();
 
+	void InitGame();
 	void HandleEvents();
 	void Process(float dt);
 	void Render();
 
 private:
 	void ConstructSDL(int w = 1920, int h = 1080, bool fullscreen = false);
-	const static int MAX_NUM_PLAYERS = 2;
 
 	SDL_Window* m_pGameWindow;
 	SDL_Renderer* m_pRenderer;
@@ -38,9 +38,6 @@ private:
 	int m_iFrameCount;
 
 	Board m_board;
-	Player m_player;
-	BasicAI m_opponent;
-	ChessUser* m_players[MAX_NUM_PLAYERS];
 
 	bool m_LMBD;
 	SDL_Point m_mousePosition;
@@ -48,6 +45,6 @@ private:
 	SDL_Point m_clickOffset;
 
 	SDL_Rect m_resetPos;
-	apiObject* m_pSelectedObject;
+	Tile* m_pSelectedObject;
 };
 

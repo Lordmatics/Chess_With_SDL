@@ -1,4 +1,5 @@
 #pragma once
+#include <string>
 
 struct SDL_Texture;
 struct SDL_Renderer;
@@ -12,6 +13,7 @@ public:
 	void AssignSprite(SDL_Renderer* pRenderer, const char* path);
 private:
 
+	std::string m_spriteResourceFilePath;
 	SDL_Texture* m_pTexture;
 };
 

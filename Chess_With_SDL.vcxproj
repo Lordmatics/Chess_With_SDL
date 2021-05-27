@@ -139,19 +139,25 @@
     <ClCompile Include="BasicAI.cpp" />
     <ClCompile Include="Board.cpp" />
     <ClCompile Include="ChessUser.cpp" />
+    <ClCompile Include="Coordinate.cpp" />
     <ClCompile Include="GameLoop.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="NMSprite.cpp" />
+    <ClCompile Include="Piece.cpp" />
     <ClCompile Include="Player.cpp" />
+    <ClCompile Include="Tile.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="apiObject.h" />
     <ClInclude Include="BasicAI.h" />
     <ClInclude Include="Board.h" />
     <ClInclude Include="ChessUser.h" />
+    <ClInclude Include="Coordinate.h" />
     <ClInclude Include="GameLoop.h" />
     <ClInclude Include="NMSprite.h" />
+    <ClInclude Include="Piece.h" />
     <ClInclude Include="Player.h" />
+    <ClInclude Include="Tile.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
