@@ -47,7 +47,7 @@ public:
 	static std::map<Piece::PieceFlag, PiecePaths> m_pieceMap;
 
 	Tile* GetTileAtPoint(SDL_Point* point, int startIndex = 0);
-	Tile* GetPieceAtPoint(SDL_Point* point, int startIndex = 0);
+	Piece* GetPieceAtPoint(SDL_Point* point, int startIndex = 0);
 	void GenerateLegalMoves(Tile* pSelectedObject);
 	void RenderLegalMoves(SDL_Renderer* pRenderer);
 	void ClearLegalMoves();

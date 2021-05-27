@@ -57,19 +57,25 @@ Tile* Board::GetTileAtPoint(SDL_Point* point, int startIndex)
 	return nullptr;
 }
 
-Tile* Board::GetPieceAtPoint(SDL_Point* point, int startIndex)
+Piece* Board::GetPieceAtPoint(SDL_Point* point, int startIndex)
 {
-	const int total = m_iRows * m_iColumns;
-	for (int i = startIndex; i < total; i++)
-	{	
-		Tile& object = m_board[i];
-		SDL_Rect& rect = object.GetTransform();
-		if (SDL_PointInRect(point, &rect))
-		{
-			return &object;
-		}
-		
+	if (Tile* pTile = GetTileAtPoint(point, startIndex))
+	{
+		return pTile->GetPiece();
 	}
+	//const int total = m_iRows * m_iColumns;
+	//for (int i = startIndex; i < total; i++)
+	//{	
+	//	Tile& object = m_board[i];
+	//	if (Piece* pOccupant = object.GetPiece())
+	//	{
+	//		SDL_Rect& rect = pOccupant->GetTransform();			
+	//		if (SDL_PointInRect(point, &rect))
+	//		{
+	//			return &object;
+	//		}
+	//	}	
+	//}
 	return nullptr;
 }
 
@@ -523,6 +529,12 @@ void Board::Render(SDL_Renderer* pRenderer)
 	//		}
 	//	}
 	//}
+
+	for (int i = 0; i < 64; i++)
+	{
+		Tile& tile = m_board[i];
+		tile.RenderBG(pRenderer);
+	}
 
 	for (int i = 0; i < 64 ; i++)
 	{

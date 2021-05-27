@@ -35,10 +35,14 @@ public:
 	static std::map<Piece::PieceFlag, int> m_valueMap;
 
 	void Render(SDL_Renderer* pRenderer) override;
+	void RenderAsSelected(SDL_Renderer* pRenderer);
 
 	void Init(SDL_Renderer* pRenderer, int i, int j, ChessUser* owner);
+	void SetSelected(bool val);
+	bool IsSelected() const { return m_bSelected; }
 private:
 	ChessUser* m_pOwner;
 	uint32_t m_pieceflags;	
+	bool m_bSelected;
 };
 

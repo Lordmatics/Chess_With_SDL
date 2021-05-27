@@ -64,32 +64,6 @@ void Tile::RenderLegalHighlight(SDL_Renderer* pRenderer)
 	}
 }
 
-void Tile::ResetLegalHighlight()
-{
-	SDL_Rect& transform = GetTransform();
-	NMSprite& sprite = GetSprite();
-	if (SDL_Texture* pTexture = sprite.GetTexture())
-	{
-		SDL_SetTextureColorMod(pTexture, 255, 255, 255);
-	}
-}
-
-void Tile::Render(SDL_Renderer* pRenderer)
-{
-	SDL_Rect& transform = GetTransform();
-	NMSprite& sprite = GetSprite();
-	if (SDL_Texture* pTexture = sprite.GetTexture())
-	{
-		SDL_RenderCopy(pRenderer, pTexture, nullptr, &transform);
-	}
-
-	if (Piece* pPiece = m_occupiedPiece)
-	{
-		//if(pPiece->GetFlags() & (uint32_t)Piece::PieceFlag::Pawn)
-		pPiece->Render(pRenderer);
-	}
-}
-
 void Tile::Init(SDL_Renderer* pRenderer, int boardID)
 {
 	if (!pRenderer)
@@ -187,5 +161,39 @@ void Tile::Debug()
 	if (Piece* pPiece = m_occupiedPiece)
 	{
 		pPiece->Debug();
+	}
+}
+
+void Tile::ResetLegalHighlight()
+{
+	SDL_Rect& transform = GetTransform();
+	NMSprite& sprite = GetSprite();
+	if (SDL_Texture* pTexture = sprite.GetTexture())
+	{
+		SDL_SetTextureColorMod(pTexture, 255, 255, 255);
+	}
+}
+
+void Tile::Render(SDL_Renderer* pRenderer)
+{
+	RenderPiece(pRenderer);
+}
+
+void Tile::RenderBG(SDL_Renderer* pRenderer)
+{
+	SDL_Rect& transform = GetTransform();
+	NMSprite& sprite = GetSprite();
+	if (SDL_Texture* pTexture = sprite.GetTexture())
+	{
+		SDL_RenderCopy(pRenderer, pTexture, nullptr, &transform);
+	}
+}
+
+void Tile::RenderPiece(SDL_Renderer* pRenderer)
+{
+	if (Piece* pPiece = m_occupiedPiece)
+	{
+		//if(pPiece->GetFlags() & (uint32_t)Piece::PieceFlag::Pawn)
+		pPiece->Render(pRenderer);
 	}
 }

@@ -17,7 +17,8 @@ std::map<Piece::PieceFlag, int> Piece::m_valueMap =
 
 Piece::Piece() :
 	apiObject(),
-	m_pieceflags((uint32_t)PieceFlag::None)
+	m_pieceflags((uint32_t)PieceFlag::None),
+	m_bSelected(false)
 {
 
 }
@@ -73,6 +74,14 @@ void Piece::Debug()
 }
 
 void Piece::Render(SDL_Renderer* pRenderer)
+{
+	if (IsSelected())
+		return;
+
+	RenderAsSelected(pRenderer);
+}
+
+void Piece::RenderAsSelected(SDL_Renderer* pRenderer)
 {
 	SDL_Rect& transform = GetTransform();
 	NMSprite& sprite = GetSprite();
@@ -173,4 +182,9 @@ void Piece::Init(SDL_Renderer* pRenderer, int i, int j, ChessUser* pOwner)
 	SetCoord({ xCoord, yCoord });
 
 	//Debug();
+}
+
+void Piece::SetSelected(bool val)
+{
+	m_bSelected = val;
 }

@@ -53,3 +53,8 @@ void apiObject::Debug()
 	std::cout << "X: " << rect.x << " (" << m_boardCoordinate.m_x << ") " << "\t";
 	std::cout << "Y: " << rect.y << " (" << m_boardCoordinate.m_y << ") " << std::endl;
 }
+
+const int apiObject::GetTileIDFromCoord() const
+{
+	return m_boardCoordinate.m_y * 8 + m_boardCoordinate.m_x;
+}

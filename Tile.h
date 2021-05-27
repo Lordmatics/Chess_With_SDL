@@ -25,15 +25,22 @@ public:
 	int GetBoardIndex() const { return m_iBoardIndex; }
 
 	virtual void Render(SDL_Renderer* pRenderer) override;
+	void RenderBG(SDL_Renderer* pRenderer);
+
 	void Init(SDL_Renderer* pRenderer, int boardID);
 	void AddPiece(Piece* piece);
 	void RemovePiece();
+
+	Piece* GetPiece() const { return m_occupiedPiece; }
 
 	virtual void Debug() override;
 
 	static const int s_iTileWidth = 128;
 	static const int s_iTileHeight = 128;
 private:
+
+	void RenderPiece(SDL_Renderer* pRenderer);
+
 	Piece* m_occupiedPiece;
 	int m_iBoardIndex;
 	bool m_bHasMoved;

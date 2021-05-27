@@ -25,6 +25,8 @@ public:
 
 	virtual void Render(SDL_Renderer* pRenderer) = 0;
 	virtual void Debug() override;
+
+	const int GetTileIDFromCoord() const;
 protected:
 
 	NMSprite m_graphic;

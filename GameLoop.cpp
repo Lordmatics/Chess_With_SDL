@@ -63,34 +63,6 @@ void GameLoop::ConstructSDL(int w, int h, bool fullscreen)
 	}
 
 	InitGame();
-
-	//m_players[0] = &m_player;
-	//m_players[1] = &m_opponent;	
-
-	//std::srand((unsigned int)time(NULL));
-	//int random = std::rand() % 1;
-	//if (random == 1)
-	//{
-	//	m_player.SetWhite(true);
-	//	m_player.SetSide(ChessUser::Side::BOTTOM);
-	//	m_opponent.SetWhite(false);
-	//	m_opponent.SetSide(ChessUser::Side::TOP);
-	//}
-	//else
-	//{
-	//	m_player.SetWhite(false);
-	//	m_player.SetSide(ChessUser::Side::BOTTOM);
-	//	m_opponent.SetWhite(true);
-	//	m_opponent.SetSide(ChessUser::Side::TOP);
-	//}
-
-	//for (int i = 0; i < MAX_NUM_PLAYERS; i++)
-	//{
-	//	if (m_players[i])
-	//	{
-	//		m_players[i]->Init(m_pRenderer);
-	//	}
-	//}	
 }
 
 void GameLoop::CleanUp()
@@ -104,8 +76,6 @@ void GameLoop::CleanUp()
 
 	std::cout << "Game Cleaned!" << std::endl;
 }
-
-
 
 void GameLoop::HandleEvents()
 {
@@ -144,7 +114,7 @@ void GameLoop::HandleEvents()
 				for (int i = 0; i < Board::m_iColumns ; i++)
 				{
 
-					if (Tile* pTile = m_board.GetPieceAtPoint(&m_mousePosition))
+					if (Piece* pTile = m_board.GetPieceAtPoint(&m_mousePosition))
 					{
 						//Tile& pawn = m_player.GetPawns()[i];
 						if (SDL_Rect* pawnTransform = &pTile->GetTransform())
@@ -153,7 +123,8 @@ void GameLoop::HandleEvents()
 							{
 								m_resetPos = pTile->GetTransform();
 								m_pSelectedRect = pawnTransform;
-								m_pSelectedObject = pTile;
+								m_pSelectedPiece = pTile;
+								m_pSelectedPiece->SetSelected(true);
 								break;
 							}
 						}
@@ -172,7 +143,7 @@ void GameLoop::HandleEvents()
 					//	break;
 					//}
 				}
-				m_board.GenerateLegalMoves(m_pSelectedObject);
+				//m_board.GenerateLegalMoves(m_pSelectedPiece);
 			}
 
 			volatile int i = 5;
@@ -194,7 +165,8 @@ void GameLoop::HandleEvents()
 
 				m_pSelectedRect = nullptr;
 				
-				m_pSelectedObject = nullptr;
+				m_pSelectedPiece->SetSelected(false);
+				m_pSelectedPiece = nullptr;
 
 			}
 			break;
@@ -260,6 +232,11 @@ void GameLoop::Render()
 	SDL_RenderClear(m_pRenderer);
 
 	m_board.Render(m_pRenderer);
+
+	if (Piece* pSelected = m_pSelectedPiece)
+	{
+		pSelected->RenderAsSelected(m_pRenderer);
+	}
 
 	// Show Legal Moves
 	//m_board.RenderLegalMoves(m_pRenderer);
