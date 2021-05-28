@@ -62,6 +62,85 @@ const char* Piece::GetPieceName() const
 	return "Unknown";
 }
 
+//void Piece::SetPos(int x, int y)
+//{
+//	if (ChessUser* pOwner = m_pOwner)
+//	{
+//		//if (south)
+//		//{
+//		//	xCoord = j;
+//		//	yCoord = 8 + (i - 2);
+//		//}
+//		//else
+//		//{
+//		//	// 0 then 1
+//		//	// we want 1 then 0
+//		//	xCoord = j;
+//		//	yCoord = i;//1 - i;
+//		//}
+//
+//		const bool south = pOwner->GetSide() == ChessUser::Side::BOTTOM ? true : false;
+//		int i = south ? m_boardCoordinate.m_y + 2 - 8 : m_boardCoordinate.m_y;
+//		int j = m_boardCoordinate.m_x;
+//		const bool pawnConfig = (i == 0 && south) || (i == 1 && !south);
+//		const int innerTilePieceOffset = 16;
+//		const int innerTilePawnOffset = 26;
+//		const int buffer = pawnConfig ? innerTilePawnOffset : innerTilePieceOffset;
+//		const int xOffset = 896 / 2; // Quarter X Reso
+//		const int yOffset = 28; // Each tile is 128, so 128 * 8 = 1024. reso = 1920:1080, so 1080 - 1024 = 56, then half top/bot, so 28 each side
+//		const int tileSize = 128;
+//		int xPos = xOffset + buffer + (j * tileSize);
+//		if (south)
+//		{
+//			int yPos = yOffset + buffer + ((i + 6) * tileSize);
+//			x = xPos;
+//			y = yPos;
+//		}
+//		else
+//		{
+//			int yPos = yOffset + buffer + (i * tileSize);
+//			x = xPos;
+//			y = yPos;
+//		}
+//	}
+//
+//	apiObject::SetPos(x, y);
+//}
+
+void Piece::UpdatePosFromCoord()
+{
+	int x = 0;
+	int y = 0;
+	if (ChessUser* pOwner = m_pOwner)
+	{
+
+		const bool south = pOwner->GetSide() == ChessUser::Side::BOTTOM ? true : false;
+		int i = south ? m_boardCoordinate.m_y + 2 - 8 : m_boardCoordinate.m_y;
+		int j = m_boardCoordinate.m_x;
+		const bool pawnConfig = GetFlags() & (uint32_t)PieceFlag::Pawn;// (i == 0 && south) || (i == 1 && !south);
+		const int innerTilePieceOffset = 16;
+		const int innerTilePawnOffset = 26;
+		const int buffer = pawnConfig ? innerTilePawnOffset : innerTilePieceOffset;
+		const int xOffset = 896 / 2; // Quarter X Reso
+		const int yOffset = 28; // Each tile is 128, so 128 * 8 = 1024. reso = 1920:1080, so 1080 - 1024 = 56, then half top/bot, so 28 each side
+		const int tileSize = 128;
+		int xPos = xOffset + buffer + (j * tileSize);
+		if (south)
+		{
+			int yPos = yOffset + buffer + ((i + 6) * tileSize);
+			x = xPos;
+			y = yPos;
+		}
+		else
+		{
+			int yPos = yOffset + buffer + (i * tileSize);
+			x = xPos;
+			y = yPos;
+		}
+		SetPos(x, y);
+	}
+}
+
 void Piece::Debug()
 {
 	const bool playerControlled = dynamic_cast<Player*>(m_pOwner) ? true : false;
@@ -75,7 +154,7 @@ void Piece::Debug()
 
 void Piece::Render(SDL_Renderer* pRenderer)
 {
-	if (IsSelected())
+	if (IsSelected() || IsCaptured())
 		return;
 
 	RenderAsSelected(pRenderer, true);
@@ -110,13 +189,6 @@ void Piece::Init(SDL_Renderer* pRenderer, int i, int j, ChessUser* pOwner)
 		pathID = 1;
 	}
 	const bool south = pOwner->GetSide() == ChessUser::Side::BOTTOM ? true : false;
-	const int tileSize = 128;
-	const int xOffset = 896 / 2; // Quarter X Reso
-	const int yOffset = 28; // Each tile is 128, so 128 * 8 = 1024. reso = 1920:1080, so 1080 - 1024 = 56, then half top/bot, so 28 each side
-	const int pieceSize = 96;
-	const int pawnSize = 76;
-	const int innerTilePieceOffset = 16;
-	const int innerTilePawnOffset = 26;
 	NMSprite& sprite = GetSprite();
 	const bool pawnConfig = (i == 0 && south) || (i == 1 && !south);
 	if (pawnConfig)
@@ -152,24 +224,11 @@ void Piece::Init(SDL_Renderer* pRenderer, int i, int j, ChessUser* pOwner)
 			SetFlags((uint32_t)Piece::PieceFlag::King | colour);
 		}
 	}
-	const int size = pawnConfig ? pawnSize : pieceSize;
-	SetSize(size, size);
-	const int buffer = pawnConfig ? innerTilePawnOffset : innerTilePieceOffset;
-	int xPos = xOffset + buffer + (j * tileSize);
-	if (south)
-	{
-		int yPos = yOffset + buffer + ((i + 6) * tileSize);
-		SetPos(xPos, yPos);
-	}
-	else
-	{
-		int yPos = yOffset + buffer + (i * tileSize);
-		SetPos(xPos, yPos);
-	}
+
 
 	const int index = j * (i + 1);
 	int xCoord = index % 8;
-	int yCoord = (int)index/ 8;
+	int yCoord = (int)index / 8;
 
 	if (south)
 	{
@@ -186,6 +245,29 @@ void Piece::Init(SDL_Renderer* pRenderer, int i, int j, ChessUser* pOwner)
 
 	SetCoord({ xCoord, yCoord });
 
+	const int pieceSize = 96;
+	const int pawnSize = 76;
+	const int size = pawnConfig ? pawnSize : pieceSize;
+	SetSize(size, size);
+	//const int innerTilePieceOffset = 16;
+	//const int innerTilePawnOffset = 26;
+	//const int buffer = pawnConfig ? innerTilePawnOffset : innerTilePieceOffset;
+	//const int xOffset = 896 / 2; // Quarter X Reso
+	//const int yOffset = 28; // Each tile is 128, so 128 * 8 = 1024. reso = 1920:1080, so 1080 - 1024 = 56, then half top/bot, so 28 each side
+	//const int tileSize = 128;
+	//int xPos = xOffset + buffer + (j * tileSize);
+	//if (south)
+	//{
+	//	int yPos = yOffset + buffer + ((i + 6) * tileSize);
+	//	SetPos(xPos, yPos);
+	//}
+	//else
+	//{
+	//	int yPos = yOffset + buffer + (i * tileSize);
+	//	SetPos(xPos, yPos);
+	//}
+	//SetPos(0, 0);
+	UpdatePosFromCoord();
 	//Debug();
 }
 
@@ -213,12 +295,31 @@ bool Piece::CanCapture(Piece* pTargetPiece)
 			// Diagonal Coordinates or Enpassant
 			Coordinate myCoord = GetCoordinate();
 			Coordinate targetCoord = pTargetPiece->GetCoordinate();
+			Coordinate targetPrevCoord = pTargetPiece->GetPreviousCoordinate();
 			if (myCoord.m_x == targetCoord.m_x)
 			{
 				// In the same column, ignore
 				return false;
+			} // Check Enpassant
+			else if (myCoord.m_y == targetCoord.m_y &&
+				((myCoord.m_x == targetCoord.m_x - 1) || (myCoord.m_x == targetCoord.m_x + 1)) )
+			{
+				// If we're adjacent - Determine if target had just moved 2 squares
+				int diff = targetCoord.m_y - targetPrevCoord.m_y;
+				if (diff < 0)
+				{
+					diff *= -1;
+				}
+
+				if (diff == 2)
+				{
+					return true;
+				}
+				else
+				{
+					return false;
+				}
 			}
-			//else if(myCoord.m_y)
 		}
 	}
 	return true;
@@ -231,4 +332,24 @@ bool Piece::IsSouthPlaying() const
 		return pOwner->GetSide() == ChessUser::BOTTOM;
 	}
 	return true;
+}
+
+const bool Piece::HasMoved() const
+{
+	const Coordinate& coord = GetCoordinate();
+	const bool side = IsSouthPlaying();
+	const bool isPawn = GetFlags() & (uint32_t)Piece::PieceFlag::Pawn;
+	if (side)
+	{
+		// If we're playing on the bottom
+		// We haven't moved if we're on the 6th or 7th row depending on piece
+		const int rowToCompare = isPawn ? 6 : 7;
+		return coord.m_y != rowToCompare;
+	}
+	else
+	{
+		const int rowToCompare = isPawn ? 1 : 0;
+		return coord.m_y != rowToCompare;
+	}
+	return false;
 }

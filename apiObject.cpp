@@ -4,7 +4,8 @@
 apiObject::apiObject() :
 	m_graphic(),
 	m_transform(),
-	m_boardCoordinate()
+	m_boardCoordinate(),
+	m_prevCoordinate()
 {
 
 }
@@ -32,11 +33,13 @@ void apiObject::SetPos(int x, int y)
 
 void apiObject::SetCoord(Coordinate coord)
 {
+	m_prevCoordinate = m_boardCoordinate;
 	m_boardCoordinate = coord;
 }
 
 void apiObject::SetCoord(int x, int y)
 {
+	m_prevCoordinate = m_boardCoordinate;
 	m_boardCoordinate.m_x = x;
 	m_boardCoordinate.m_y = y;
 }

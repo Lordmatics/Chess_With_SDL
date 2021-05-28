@@ -57,7 +57,19 @@ public:
 	void AddPiece(int boardID, Piece* object);
 
 	template<class Function>
-	bool TileMatch(const Function& Predicate);
+	bool TileMatch(const Function& Predicate, int validList = 1);
+
+	void GenerateLegalPawnMoves(int x, int y, bool isSouth, Piece* pSelectedPiece);
+	void GenerateLegalKingMoves(int x, int y, bool isSouth, Piece* pSelectedPiece);
+	void GenerateLegalHorseMoves(int x, int y, bool isSouth, Piece* pSelectedPiece);
+	void GenerateLegalBishopMoves(int x, int y, bool isSouth, Piece* pSelectedPiece);
+	void GenerateLegalRookMoves(int x, int y, bool isSouth, Piece* pSelectedPiece);
+	void GenerateLegalQueenMoves(int x, int y, bool isSouth, Piece* pSelectedPiece);
+
+
+	void Test();
+
+	Tile* GetTile(int id);
 private:
 	//Tile m_backgroundTiles[8][8];
 	Tile m_board[64]; // Generate the 32 pieces in here, and leave the rest of the tiles intiialised as NONE
@@ -69,9 +81,10 @@ private:
 };
 
 template<class Function>
-bool Board::TileMatch(const Function& Predicate)
+bool Board::TileMatch(const Function& Predicate, int validList)
 {
-	for (Tile* pTile : m_queryingTiles)
+	std::vector<Tile*>& listToUse = validList == 1 ? m_validTiles : m_queryingTiles;
+	for (Tile* pTile : listToUse)
 	{
 		if (Predicate(pTile))
 		{

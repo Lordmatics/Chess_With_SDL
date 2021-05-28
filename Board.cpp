@@ -106,27 +106,6 @@ void Board::GenerateLegalMoves(Piece* pSelectedObject)
 	
 	const int tileId = pSelectedObject->GetTileIDFromCoord();
 
-	//for (int i = 0; i < 64 ; i++)
-	//{
-	//	if (&m_board[i] == pSelectedObject)
-	//	{
-
-	//		//int temp = i;// +1;
-	//		//x = (temp ) % Board::m_iColumns;
-	//		//y = (int)(temp / Board::m_iColumns);
-	//		//indexFound = i;
-	//		//x = 8 - pSelectedObject->GetX();
-	//		//y = pSelectedObject->GetY();
-	//		matchFoundOnBoard = true;
-	//		break;
-	//	}
-	//}
-
-	//if (!matchFoundOnBoard)
-	//{
-	//	return;
-	//}
-
 	uint32_t flags = pSelectedObject->GetFlags();
 	//const bool isWhite = pSelectedObject->IsColour((uint32_t)Piece::PieceFlag::White);
 	const bool isWhite = pSelectedObject->GetFlags() & (uint32_t)Piece::PieceFlag::White ? true : false;
@@ -139,151 +118,27 @@ void Board::GenerateLegalMoves(Piece* pSelectedObject)
 	y = coord.m_y;
 	if (flags & (uint32_t)Piece::PieceFlag::Pawn)
 	{
-
-
-		// Valid Y Pos
-		// Start on 6, 5 and 4 are the 2 tiles in front
-		// Valid X
-		// Start on 4, { 3 4 and 5 } would be valid in varying cases
-		
-		
-		// TODO: Fix Overflow on edges / DONE
-		// TODO: Fix North Side / DONE
-		const int totalCoords = 6;
-		Coordinate valiCoords[totalCoords] = { };
-		int counter = 0;
-		int targetY = isSouth ? y - 1 : y + 1;
-		int exceptions = 0;
-		for (int i = x - 1; i < x + 2 ; i++)
-		{
-			if (i < 0 || i > 7)
-			{
-				exceptions++;
-				continue;
-			}
-
-			valiCoords[counter++] = { i, targetY };
-			if (i == x)
-			{
-				if (isSouth)
-				{
-					valiCoords[counter++] = { i, targetY - 1 };
-				}
-				else
-				{
-					valiCoords[counter++] = { i, targetY + 1 };
-				}
-			}
-			else if (i == x - 1)
-			{
-				// EnPassant Support
-				if (isSouth)
-				{
-					valiCoords[counter++] = { i,targetY + 1 };
-				}
-				else
-				{
-					valiCoords[counter++] = { i,targetY - 1 };
-				}
-			}
-			else if (i == x + 1)
-			{
-				// EnPassant Support
-				if (isSouth)
-				{
-					valiCoords[counter++] = { i,targetY + 1 };
-				}
-				else
-				{
-					valiCoords[counter++] = { i,targetY - 1 };
-				}
-			}
-		}
-
-		for (int i = 0; i < totalCoords - exceptions; i++)
-		{
-			int id = GetTileIDFromCoord(valiCoords[i]);
-			m_queryingTiles.push_back(&m_board[id]);
-		}
-
-
-		for (Tile* pQuery : m_queryingTiles)
-		{
-			// Determine if we can ACTUALLY move there
-			Piece* pTargetPiece = pQuery->GetPiece();
-			if (pTargetPiece)
-			{
-				// If it has a piece, AND we can capture it, its valid
-				// Else ignore
-				bool capturable = pSelectedObject->CanCapture(pTargetPiece);
-				if (!capturable)
-				{
-					continue;
-				}
-			}			
-			const bool validSpot = !pQuery->GetPiece();
-			if (validSpot)
-			{
-
-			}
-			m_validTiles.push_back(pQuery);
-		}
-		//// 1 Move Forward
-		//// 2 Move Forward if in starting square
-		//// EnPassant if 2 squares forward, and opposing pawn is adjacent to us after moving 2 squares
-		
-		//int validPawnTargetIDs[4] =
-		//{
-		//	0,0,0,0
-		//};
-		//validPawnTargetIDs[0] = tileId
-		//
-		//for (int i = x - 2; i < x + 1; i++)
-		//{
-		//	for (int j = y - 2; j < y; j++)
-		//	{
-		//		// Okay, so look to our adjacent horizontal Tiles
-		//		// And at a max, 2 tiles in front
-		//		
-		//		if (j == y - 2 && i == (x - 2))
-		//		{
-		//			// Cuts Top Left
-		//			continue;
-		//		}
-
-		//		if (j == y - 2 && i == x)
-		//		{
-		//			// Cuts Top Right
-		//			continue;
-		//		}
-
-		//		if (i >= 0 && i < 8 && j >= 0 && j < 8)
-		//		{
-		//			m_queryingTiles.push_back(&m_backgroundTiles[i][j]);
-		//		}
-
-		//		//TODO: Convert Background Tiles to Board Tiles to cehck for ally / enemy piecees
-		//	}
-		//}
+		GenerateLegalPawnMoves(x, y, isSouth, pSelectedObject);		
 	}
 	else if (flags & (uint32_t)Piece::PieceFlag::King)
 	{
-		volatile int i = 5;
+		GenerateLegalKingMoves(x, y, isSouth, pSelectedObject);
 	}
 	else if (flags & (uint32_t)Piece::PieceFlag::Horse)
 	{
-		volatile int i = 5;
+		GenerateLegalHorseMoves(x, y, isSouth, pSelectedObject);
 	}
 	else if (flags & (uint32_t)Piece::PieceFlag::Bishop)
 	{
-		volatile int i = 5;
+		GenerateLegalBishopMoves(x, y, isSouth, pSelectedObject);
 	}
 	else if (flags & (uint32_t)Piece::PieceFlag::Rook)
 	{
-		volatile int i = 5;
+		GenerateLegalRookMoves(x, y, isSouth, pSelectedObject);
 	}
 	else if (flags & (uint32_t)Piece::PieceFlag::Queen)
 	{
+		GenerateLegalQueenMoves(x, y, isSouth, pSelectedObject);
 
 		if (indexFound >= 8)
 		{
@@ -298,7 +153,10 @@ void Board::RenderLegalMoves(SDL_Renderer* pRenderer)
 {
 	// TODO: Filter Query Tiles for Actual Tiles
 	// Query Tiles encompass ALL Possible moves without restriction
-	for (Tile* tile : m_queryingTiles)
+
+	const bool actual = true;
+	std::vector<Tile*>& tiles = actual ? m_validTiles : m_queryingTiles;
+	for (Tile* tile : m_validTiles)
 	{
 		if (tile)
 		{
@@ -317,6 +175,15 @@ void Board::ClearLegalMoves()
 		}
 	}
 	m_queryingTiles.clear();
+
+	for (Tile* tile : m_validTiles)
+	{
+		if (tile)
+		{
+			tile->ResetLegalHighlight();
+		}
+	}
+	m_validTiles.clear();
 }
 
 Board::Board()
@@ -665,4 +532,399 @@ Board::PiecePaths::PiecePaths(const char* a, const char* b)
 Board::PiecePaths::PiecePaths()
 {
 
+}
+
+void Board::GenerateLegalPawnMoves(int x, int y, bool isSouth, Piece* pSelectedPiece)
+{
+	const int totalCoords = 6;
+	CoordSet valiCoords[totalCoords] = { };
+	int counter = 0;
+	int targetY = isSouth ? y - 1 : y + 1;
+	int exceptions = 0;
+	bool bCheckEnpassant = false;
+	Coordinate pieceCoord = pSelectedPiece->GetCoordinate();
+	const int pieceY = pieceCoord.m_y;
+	const bool side = pSelectedPiece->IsSouthPlaying();
+	const bool hasMoved = pSelectedPiece->HasMoved();
+	if (side)
+	{
+		if (pieceY == 3)
+		{
+			bCheckEnpassant = true;
+		}
+	}
+	else
+	{
+		if (pieceY == 4)
+		{
+			bCheckEnpassant = true;
+		}
+	}
+	bool allExceptions = true;
+	for (int i = x - 1; i < x + 2; i++)
+	{
+		if (i < 0 || i > 7 || targetY < 0)
+		{
+			exceptions++;
+			continue;
+		}
+
+		valiCoords[counter++] = { {i, targetY}, true };
+		allExceptions = false;
+		if (i == x)
+		{
+			if (!hasMoved)
+			{
+				// If we're stationary check for double move
+				// TODO: Check For Obstructed
+				int id = GetTileIDFromCoord({ i, targetY });
+				if (Tile* pTile = GetTile(id))
+				{
+					if (Piece* pPiece = pTile->GetPiece())
+					{
+						// Obstructed
+						exceptions++;
+						continue;
+					}
+				}
+
+				if (isSouth)
+				{
+					const int localY = targetY - 1;
+					if (localY >= 0 && localY < 8)
+					{
+						valiCoords[counter++] = { {i, targetY - 1}, true };
+					}
+				}
+				else
+				{
+					const int localY = targetY + 1;
+					if (localY >= 0 && localY < 8)
+					{
+						valiCoords[counter++] = { {i, targetY + 1}, true };
+					}
+				}
+			}
+		}
+		else if (i == x - 1 && bCheckEnpassant)
+		{
+			// EnPassant Support
+			if (isSouth)
+			{
+				const int localY = targetY + 1;
+				if (localY >= 0 && localY < 8)
+				{
+					valiCoords[counter++] = { {i, targetY + 1}, true };
+				}
+			}
+			else
+			{
+				const int localY = targetY - 1;
+				if (localY >= 0 && localY < 8)
+				{
+					valiCoords[counter++] = { {i, targetY - 1}, true };
+				}
+			}
+		}
+		else if (i == x + 1 && bCheckEnpassant)
+		{
+			// EnPassant Support
+			if (isSouth)
+			{
+				const int localY = targetY + 1;
+				if (localY >= 0 && localY < 8)
+				{
+					valiCoords[counter++] = { {i, targetY + 1}, true };
+				}
+			}
+			else
+			{
+				const int localY = targetY - 1;
+				if (localY >= 0 && localY < 8)
+				{
+					valiCoords[counter++] = { {i, targetY - 1}, true };
+				}
+			}
+		}
+		else
+		{
+			exceptions++;
+		}
+	}
+
+	if (allExceptions)
+	{
+		return;
+	}
+
+	for (int i = 0; i < totalCoords - exceptions; i++)
+	{
+		const bool isSet = valiCoords[i].m_bSet;
+		if (!isSet)
+		{
+			continue;
+		}
+		int id = GetTileIDFromCoord(valiCoords[i].m_coord);
+		m_queryingTiles.push_back(&m_board[id]);
+	}
+
+
+	for (Tile* pQuery : m_queryingTiles)
+	{
+		// Determine if we can ACTUALLY move there
+		Piece* pTargetPiece = pQuery->GetPiece();
+		if (pTargetPiece)
+		{
+			// If it has a piece, AND we can capture it, its valid
+			// Else ignore
+			bool capturable = pSelectedPiece->CanCapture(pTargetPiece);
+			if (!capturable)
+			{
+				continue;
+			}
+			else
+			{
+				// Determine if it were to be enpassant
+				Coordinate b = pTargetPiece->GetCoordinate();
+				Coordinate a = pSelectedPiece->GetCoordinate();
+				if (a.m_y == b.m_y)
+				{
+					// Adjacent
+					Coordinate targetCoord = b;
+					if (pTargetPiece->IsSouthPlaying())
+					{
+						targetCoord.m_y += 1;
+					}
+					else
+					{
+						targetCoord.m_y -= 1;
+					}
+					bool added = false;
+					for (Tile* pQuery : m_queryingTiles)
+					{
+						// Look for the query tile above this one
+						Coordinate coord = pQuery->GetCoordinate();
+						if (coord == targetCoord)
+						{
+							for (Tile* pValid : m_validTiles)
+							{
+								if (pQuery == pValid)
+								{
+									return;
+								}
+							}
+							m_validTiles.push_back(pQuery);
+							added = true;
+							break;
+						}
+					}
+					if(added)
+						continue;
+				}
+			}
+		}
+		else
+		{
+			// No Piece
+			// Check Coords with same X Position
+			Coordinate pawnPos = pSelectedPiece->GetCoordinate();
+			Coordinate tilePos = pQuery->GetCoordinate();
+			if (pawnPos.m_x != tilePos.m_x)
+			{
+				continue;
+			}
+		}		
+		m_validTiles.push_back(pQuery);
+	}
+}
+
+void Board::GenerateLegalKingMoves(int x, int y, bool isSouth, Piece* pSelectedPiece)
+{
+
+}
+
+void Board::GenerateLegalHorseMoves(int x, int y, bool isSouth, Piece* pSelectedPiece)
+{
+
+}
+
+void Board::GenerateLegalBishopMoves(int x, int y, bool isSouth, Piece* pSelectedPiece)
+{
+	const int totalCoords = 6;
+	CoordSet valiCoords[totalCoords] = { };
+	int counter = 0;
+	int targetY = isSouth ? y - 1 : y + 1;
+	int exceptions = 0;
+	bool bCheckEnpassant = false;
+	Coordinate pieceCoord = pSelectedPiece->GetCoordinate();
+	const int pieceY = pieceCoord.m_y;
+	const bool side = pSelectedPiece->IsSouthPlaying();
+	const bool hasMoved = pSelectedPiece->HasMoved();
+	if (side)
+	{
+		if (pieceY == 3)
+		{
+			bCheckEnpassant = true;
+		}
+	}
+	else
+	{
+		if (pieceY == 4)
+		{
+			bCheckEnpassant = true;
+		}
+	}
+	bool allExceptions = true;
+
+	auto CheckBishop = [&](bool& bObstructed, Coordinate diagonalCoord, Coordinate rule)
+	{
+		while (!bObstructed)
+		{
+			int TileID = GetTileIDFromCoord(diagonalCoord);
+			if (Tile* pTile = GetTile(TileID))
+			{
+				Coordinate tileCoord = pTile->GetCoordinate();
+				if (rule.m_x > 0)
+				{
+					// East - If we have overflown to the other side of the board. Stop Right There Criminal Scum.
+					if (tileCoord.m_x < diagonalCoord.m_x)
+					{
+						bObstructed = true;
+						break;
+					}					
+				}
+				else if (rule.m_y > 0)
+				{
+					if (tileCoord.m_y < diagonalCoord.m_y)
+					{
+						bObstructed = true;
+						break;
+					}
+				}
+				if (diagonalCoord.m_x < 0 || diagonalCoord.m_y < 0 ||
+					diagonalCoord.m_x >= 8 || diagonalCoord.m_y >= 8)
+				{
+					bObstructed = true;
+					break;
+				}
+				if (Piece* pPiece = pTile->GetPiece())
+				{
+					bool amWhite = pSelectedPiece->GetFlags() & (uint32_t)Piece::PieceFlag::White;
+					bool opponentWhite = pPiece->GetFlags()  & (uint32_t)Piece::PieceFlag::White;
+					if (amWhite == opponentWhite)
+					{
+						bObstructed = true;
+					}
+					else
+					{
+						m_validTiles.push_back(pTile);
+						break;
+					}
+						
+					bObstructed = true;
+					break;
+				}
+				else
+				{
+					m_validTiles.push_back(pTile);
+					diagonalCoord += rule;
+				}
+			}
+			else
+			{
+				bObstructed = true;
+				break;
+			}
+		}
+	};
+
+	for (int i = 0; i < 4 ; i++)
+	{
+		// Check 4 diagonals
+		bool bObstructed = false;
+		Coordinate diagonalCoord = pieceCoord;
+		Coordinate rule;
+		if (i == 0)
+		{
+			// Scan North West
+			rule = { -1, -1 };
+			diagonalCoord.m_x -= 1;
+			diagonalCoord.m_y -= 1;
+			if (diagonalCoord.m_x < 0 || diagonalCoord.m_y < 0)
+			{
+				bObstructed = true;
+				continue;
+			}			
+		}
+		else if (i == 1)
+		{
+			// Scan North East
+			rule = { 1, -1 };
+			diagonalCoord.m_x += 1;
+			diagonalCoord.m_y -= 1;
+			if (diagonalCoord.m_x >= 8 || diagonalCoord.m_y < 0)
+			{
+				bObstructed = true;
+				continue;
+			}
+		}
+		else if (i == 2)
+		{
+			// Scan South West
+			rule = { -1, 1 };
+			diagonalCoord.m_x -= 1;
+			diagonalCoord.m_y += 1;
+			if (diagonalCoord.m_x < 0 || diagonalCoord.m_y >= 8)
+			{
+				bObstructed = true;
+				continue;
+			}
+		}
+		else if (i == 3)
+		{
+			// Scan South East
+			rule = { 1, 1 };
+			diagonalCoord.m_x += 1;
+			diagonalCoord.m_y += 1;
+			if (diagonalCoord.m_x >= 8 || diagonalCoord.m_y >= 8)
+			{
+				bObstructed = true;
+				continue;
+			}
+		}
+		CheckBishop(bObstructed, diagonalCoord, rule);
+	}
+}
+
+void Board::GenerateLegalRookMoves(int x, int y, bool isSouth, Piece* pSelectedPiece)
+{
+
+}
+
+void Board::GenerateLegalQueenMoves(int x, int y, bool isSouth, Piece* pSelectedPiece)
+{
+
+}
+
+void Board::Test()
+{
+	volatile int i = 5;
+	auto a = m_queryingTiles;
+
+	auto b = m_validTiles;
+
+	volatile int j = 6;
+
+}
+
+Tile* Board::GetTile(int id)
+{
+	if (id >= 0 && id < 64)
+	{
+		return &m_board[id];
+	}
+	else
+	{
+		return nullptr;
+	}
 }

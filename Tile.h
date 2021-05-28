@@ -31,6 +31,7 @@ public:
 	void AddPiece(Piece* piece);
 	void RemovePiece();
 
+	void SetPiece(Piece* piece);
 	Piece* GetPiece() const { return m_occupiedPiece; }
 
 	virtual void Debug() override;

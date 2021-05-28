@@ -45,6 +45,7 @@ private:
 	SDL_Point m_clickOffset;
 
 	SDL_Rect m_resetPos;
+	Tile* m_pPiecesTile;
 	Piece* m_pSelectedPiece;
 };
 

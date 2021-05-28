@@ -23,6 +23,7 @@ public:
 	void SetCoord(int x, int y);
 	void SetSize(int w, int h);
 	const Coordinate& GetCoordinate() const { return m_boardCoordinate; }
+	const Coordinate& GetPreviousCoordinate() const { return m_prevCoordinate; }
 	virtual void Render(SDL_Renderer* pRenderer) = 0;
 	virtual void Debug() override;
 
@@ -32,5 +33,6 @@ protected:
 	NMSprite m_graphic;
 	SDL_Rect m_transform;
 	Coordinate m_boardCoordinate;
+	Coordinate m_prevCoordinate;
 };
 

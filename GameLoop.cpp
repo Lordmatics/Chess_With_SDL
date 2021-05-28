@@ -123,6 +123,7 @@ void GameLoop::HandleEvents()
 								{
 									m_resetPos = pOccupant->GetTransform();
 									m_pSelectedRect = &pOccupant->GetTransform();
+									m_pPiecesTile = pTile;
 									m_pSelectedPiece = pOccupant;
 									m_pSelectedPiece->SetSelected(true);
 								}
@@ -131,34 +132,6 @@ void GameLoop::HandleEvents()
 							}
 						}
 					}
-					//if (Piece* pTile = m_board.GetPieceAtPoint(&m_mousePosition))
-					//{
-					//	//Tile& pawn = m_player.GetPawns()[i];
-					//	if (SDL_Rect* pawnTransform = &pTile->GetTransform())
-					//	{
-					//		if (SDL_PointInRect(&m_mousePosition, pawnTransform))
-					//		{
-					//			m_resetPos = pTile->GetTransform();
-					//			m_pSelectedRect = pawnTransform;
-					//			m_pSelectedPiece = pTile;
-					//			m_pSelectedPiece->SetSelected(true);
-					//			break;
-					//		}
-					//	}
-					//}
-
-
-
-
-					//Tile& piece = m_player.GetPieces()[i];
-					//SDL_Rect* pieceTransform = &piece.GetTransform();
-					//if (SDL_PointInRect(&m_mousePosition, pieceTransform))
-					//{
-					//	m_resetPos = piece.GetTransform();
-					//	m_pSelectedRect = pieceTransform;
-					//	m_pSelectedObject = &piece;
-					//	break;
-					//}
 				}
 				m_board.GenerateLegalMoves(m_pSelectedPiece);
 			}
@@ -172,12 +145,122 @@ void GameLoop::HandleEvents()
 			{
 				m_LMBD = false;
 				
-				if (m_pSelectedRect)
-				{
-					m_pSelectedRect->x = m_resetPos.x;
-					m_pSelectedRect->y = m_resetPos.y;
 
+				bool allowMove = false;
+				bool isACapture = false;
+				//Coordinate allowMoveLoc;
+				Coordinate newCoord;
+				Tile* pNewTile = nullptr;
+				// If release position is in the valid tiles list - drop it off there
+				for (int i = 0; i < Board::m_iColumns; i++)
+				{
+					if (Tile* pTile = m_board.GetTileAtPoint(&m_mousePosition))
+					{
+						if (SDL_Rect* pawnTransform = &pTile->GetTransform())
+						{
+							auto Predicate = [&pTile](Tile* pOtherTile)
+							{
+								return pTile == pOtherTile;
+							};
+							if (m_board.TileMatch(Predicate, 1))
+							{
+								if (Piece* pDefender = pTile->GetPiece())
+								{
+									isACapture = true;
+
+									m_board.Test();
+
+									pDefender->SetCaptured(true);
+								}
+								else
+								{								
+									// Need to consider EnPassant
+									// If the piece could move to this square was a pawn
+									// And the Tile BELOW it HAS a Pawn as well.
+									// Need to terminate that tiles piece
+									if (Piece* pSelectedPiece = m_pSelectedPiece)
+									{
+										if (pSelectedPiece->GetFlags() & (uint32_t)Piece::PieceFlag::Pawn)
+										{
+											Coordinate temp = pTile->GetCoordinate();
+											Coordinate temp2 = pSelectedPiece->GetCoordinate();
+											bool side = pSelectedPiece->IsSouthPlaying();
+											int extra = side ? -1 : 1;
+											if (temp.m_y == (temp2.m_y + extra) && temp.m_x != temp2.m_x)
+											{
+												if (side)
+												{
+													temp.m_y += 1;
+												}
+												else
+												{
+													temp.m_y -= 1;
+												}
+												int tileID = m_board.GetTileIDFromCoord(temp);
+												if (Tile* pEnpassantTile = m_board.GetTile(tileID))
+												{
+													if (Piece* pEnpassantPawn = pEnpassantTile->GetPiece())
+													{
+														if (pEnpassantPawn->GetFlags() & (uint32_t)Piece::PieceFlag::Pawn)
+														{
+															// Terminate
+															isACapture = true;
+															pEnpassantTile->SetPiece(nullptr);
+															pEnpassantPawn->SetCaptured(true);
+														}
+													}
+												}
+											}
+										}										
+									}
+								}
+
+								allowMove = true;
+								// Need to apply piece offsets
+								newCoord = pTile->GetCoordinate();
+								pNewTile = pTile;
+								//allowMoveLoc.m_x = pawnTransform->x;
+								//allowMoveLoc.m_y = pawnTransform->y;
+								break;
+							}
+						}
+					}
 				}
+
+				if (allowMove)
+				{
+					if (Piece* pSelectedPiece = m_pSelectedPiece)
+					{
+						// Need to tell previous tile that we're gone
+						// And New tile that we have arrived
+						if (Tile* pPrevTile = m_pPiecesTile)
+						{
+							pPrevTile->SetPiece(nullptr);
+						}
+						pSelectedPiece->SetCoord(newCoord);
+						pSelectedPiece->UpdatePosFromCoord();
+						if (Tile* pDestinationTile = pNewTile)
+						{
+							pDestinationTile->SetPiece(pSelectedPiece);
+						}
+						//pSelectedPiece->SetPos(0, 0);// allowMoveLoc.m_x, allowMoveLoc.m_y);
+					}
+					//if (m_pSelectedRect)
+					//{
+					//	m_pSelectedRect->x = allowMoveLoc.m_x;
+					//	m_pSelectedRect->y = allowMoveLoc.m_y;
+					//
+					//}
+				}
+				else
+				{
+					if (m_pSelectedRect)
+					{
+						m_pSelectedRect->x = m_resetPos.x;
+						m_pSelectedRect->y = m_resetPos.y;
+					}
+				}
+
 				
 				m_board.ClearLegalMoves();
 
@@ -187,6 +270,10 @@ void GameLoop::HandleEvents()
 				{
 					pSelected->SetSelected(false);
 					pSelected = nullptr;
+				}
+				if (Tile* pPiecesTile = m_pPiecesTile)
+				{
+					pPiecesTile = nullptr;
 				}
 
 			}
@@ -203,7 +290,7 @@ void GameLoop::HandleEvents()
 				{
 					return pTile == pOtherTile;
 				};
-				if (m_board.TileMatch(Predicate))
+				if (m_board.TileMatch(Predicate, 0))
 				{
 					return;
 				}

@@ -30,6 +30,8 @@ public:
 
 	const char* GetPieceName() const;
 
+	//virtual void SetPos(int x, int y) override;
+	void UpdatePosFromCoord();
 	virtual void Debug() override;
 
 	static std::map<Piece::PieceFlag, int> m_valueMap;
@@ -43,9 +45,15 @@ public:
 	bool CanCapture(Piece* pTargetPiece);
 
 	bool IsSouthPlaying() const;
+
+	bool IsCaptured() const { return m_bCaptured; }
+	void SetCaptured(bool val) { m_bCaptured = val; }
+
+	const bool HasMoved() const;
 private:
 	ChessUser* m_pOwner;
 	uint32_t m_pieceflags;	
 	bool m_bSelected;
+	bool m_bCaptured;
 };
 

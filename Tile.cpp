@@ -150,6 +150,21 @@ void Tile::RemovePiece()
 	m_occupiedPiece = nullptr;
 }
 
+void Tile::SetPiece(Piece* piece)
+{
+	if (!piece)
+	{
+		// Piece Has Moved Off of this tile
+		volatile int i = 5;
+	}
+	else
+	{
+		// Piece has moved onto this tile
+		volatile int i = 5;
+	}
+	m_occupiedPiece = piece;
+}
+
 void Tile::Debug()
 {
 	// Top Left -> Top Right

@@ -20,3 +20,20 @@ Coordinate::Coordinate(const Coordinate& other) :
 {
 
 }
+
+void Coordinate::operator-=(const Coordinate& other)
+{
+	m_x -= other.m_x;
+	m_y -= other.m_y;
+}
+
+void Coordinate::operator+=(const Coordinate& other)
+{
+	m_x += other.m_x;
+	m_y += other.m_y;
+}
+
+bool Coordinate::operator==(const Coordinate& other)
+{
+	return m_x == other.m_x && m_y == other.m_y;
+}
