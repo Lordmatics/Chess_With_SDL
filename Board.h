@@ -48,19 +48,36 @@ public:
 
 	Tile* GetTileAtPoint(SDL_Point* point, int startIndex = 0);
 	Piece* GetPieceAtPoint(SDL_Point* point, int startIndex = 0);
-	void GenerateLegalMoves(Tile* pSelectedObject);
+	void GenerateLegalMoves(Piece* pSelectedObject);
 	void RenderLegalMoves(SDL_Renderer* pRenderer);
 	void ClearLegalMoves();
 
 	static std::map<Board::TileType, const char*> m_tileMap;
-
+	int GetTileIDFromCoord(const Coordinate& coord) const;
 	void AddPiece(int boardID, Piece* object);
+
+	template<class Function>
+	bool TileMatch(const Function& Predicate);
 private:
 	//Tile m_backgroundTiles[8][8];
 	Tile m_board[64]; // Generate the 32 pieces in here, and leave the rest of the tiles intiialised as NONE
 	std::vector<Tile*> m_queryingTiles;
+	std::vector<Tile*> m_validTiles;
 	Player m_player;
 	BasicAI m_opponent;
 	ChessUser* m_players[MAX_NUM_PLAYERS]; 
 };
+
+template<class Function>
+bool Board::TileMatch(const Function& Predicate)
+{
+	for (Tile* pTile : m_queryingTiles)
+	{
+		if (Predicate(pTile))
+		{
+			return true;
+		}
+	}
+	return false;
+}
 

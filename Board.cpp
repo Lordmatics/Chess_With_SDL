@@ -9,6 +9,13 @@ std::map<Board::TileType, const char*> Board::m_tileMap =
 	{ Board::TileType::TILED, "Assets/Images/square brown dark.png" },
 };
 
+int Board::GetTileIDFromCoord(const Coordinate& coord) const
+{
+	int x = coord.m_x;
+	int y = coord.m_y;
+	return y * 8 + x;
+}
+
 void Board::AddPiece(int boardID, Piece* object)
 {
 	if (boardID < 0 || boardID >= 64 || !object)
@@ -59,27 +66,27 @@ Tile* Board::GetTileAtPoint(SDL_Point* point, int startIndex)
 
 Piece* Board::GetPieceAtPoint(SDL_Point* point, int startIndex)
 {
-	if (Tile* pTile = GetTileAtPoint(point, startIndex))
-	{
-		return pTile->GetPiece();
-	}
-	//const int total = m_iRows * m_iColumns;
-	//for (int i = startIndex; i < total; i++)
-	//{	
-	//	Tile& object = m_board[i];
-	//	if (Piece* pOccupant = object.GetPiece())
-	//	{
-	//		SDL_Rect& rect = pOccupant->GetTransform();			
-	//		if (SDL_PointInRect(point, &rect))
-	//		{
-	//			return &object;
-	//		}
-	//	}	
+	//if (Tile* pTile = GetTileAtPoint(point, startIndex))
+	//{
+	//	return pTile->GetPiece();
 	//}
+	const int total = m_iRows * m_iColumns;
+	for (int i = startIndex; i < total; i++)
+	{	
+		Tile& object = m_board[i];
+		if (Piece* pOccupant = object.GetPiece())
+		{
+			SDL_Rect& rect = pOccupant->GetTransform();			
+			if (SDL_PointInRect(point, &rect))
+			{
+				return pOccupant;
+			}
+		}	
+	}
 	return nullptr;
 }
 
-void Board::GenerateLegalMoves(Tile* pSelectedObject)
+void Board::GenerateLegalMoves(Piece* pSelectedObject)
 {
 	if (!m_queryingTiles.empty())
 	{
@@ -95,38 +102,142 @@ void Board::GenerateLegalMoves(Tile* pSelectedObject)
 	int y = 0;
 	int indexFound = 0;
 	// Find Tile in Board
-	bool matchFoundOnBoard = false;
+	//bool matchFoundOnBoard = false;
 	
-	for (int i = 0; i < 64 ; i++)
-	{
-		if (&m_board[i] == pSelectedObject)
-		{
+	const int tileId = pSelectedObject->GetTileIDFromCoord();
 
-			//int temp = i;// +1;
-			//x = (temp ) % Board::m_iColumns;
-			//y = (int)(temp / Board::m_iColumns);
-			//indexFound = i;
-			//x = 8 - pSelectedObject->GetX();
-			//y = pSelectedObject->GetY();
-			matchFoundOnBoard = true;
-			break;
-		}
-	}
+	//for (int i = 0; i < 64 ; i++)
+	//{
+	//	if (&m_board[i] == pSelectedObject)
+	//	{
 
-	if (!matchFoundOnBoard)
-	{
-		return;
-	}
+	//		//int temp = i;// +1;
+	//		//x = (temp ) % Board::m_iColumns;
+	//		//y = (int)(temp / Board::m_iColumns);
+	//		//indexFound = i;
+	//		//x = 8 - pSelectedObject->GetX();
+	//		//y = pSelectedObject->GetY();
+	//		matchFoundOnBoard = true;
+	//		break;
+	//	}
+	//}
+
+	//if (!matchFoundOnBoard)
+	//{
+	//	return;
+	//}
 
 	uint32_t flags = pSelectedObject->GetFlags();
-	const bool isWhite = pSelectedObject->IsColour((uint32_t)Piece::PieceFlag::White);
-
+	//const bool isWhite = pSelectedObject->IsColour((uint32_t)Piece::PieceFlag::White);
+	const bool isWhite = pSelectedObject->GetFlags() & (uint32_t)Piece::PieceFlag::White ? true : false;
+	const bool isSouth = pSelectedObject->IsSouthPlaying();
+//	x = 8 - pSelectedObject->GetTransform().x;
+//	y = pSelectedObject->GetTransform().y;
+	
+	Coordinate coord = pSelectedObject->GetCoordinate();
+	x = coord.m_x;
+	y = coord.m_y;
 	if (flags & (uint32_t)Piece::PieceFlag::Pawn)
 	{
 
+
+		// Valid Y Pos
+		// Start on 6, 5 and 4 are the 2 tiles in front
+		// Valid X
+		// Start on 4, { 3 4 and 5 } would be valid in varying cases
+		
+		
+		// TODO: Fix Overflow on edges / DONE
+		// TODO: Fix North Side / DONE
+		const int totalCoords = 6;
+		Coordinate valiCoords[totalCoords] = { };
+		int counter = 0;
+		int targetY = isSouth ? y - 1 : y + 1;
+		int exceptions = 0;
+		for (int i = x - 1; i < x + 2 ; i++)
+		{
+			if (i < 0 || i > 7)
+			{
+				exceptions++;
+				continue;
+			}
+
+			valiCoords[counter++] = { i, targetY };
+			if (i == x)
+			{
+				if (isSouth)
+				{
+					valiCoords[counter++] = { i, targetY - 1 };
+				}
+				else
+				{
+					valiCoords[counter++] = { i, targetY + 1 };
+				}
+			}
+			else if (i == x - 1)
+			{
+				// EnPassant Support
+				if (isSouth)
+				{
+					valiCoords[counter++] = { i,targetY + 1 };
+				}
+				else
+				{
+					valiCoords[counter++] = { i,targetY - 1 };
+				}
+			}
+			else if (i == x + 1)
+			{
+				// EnPassant Support
+				if (isSouth)
+				{
+					valiCoords[counter++] = { i,targetY + 1 };
+				}
+				else
+				{
+					valiCoords[counter++] = { i,targetY - 1 };
+				}
+			}
+		}
+
+		for (int i = 0; i < totalCoords - exceptions; i++)
+		{
+			int id = GetTileIDFromCoord(valiCoords[i]);
+			m_queryingTiles.push_back(&m_board[id]);
+		}
+
+
+		for (Tile* pQuery : m_queryingTiles)
+		{
+			// Determine if we can ACTUALLY move there
+			Piece* pTargetPiece = pQuery->GetPiece();
+			if (pTargetPiece)
+			{
+				// If it has a piece, AND we can capture it, its valid
+				// Else ignore
+				bool capturable = pSelectedObject->CanCapture(pTargetPiece);
+				if (!capturable)
+				{
+					continue;
+				}
+			}			
+			const bool validSpot = !pQuery->GetPiece();
+			if (validSpot)
+			{
+
+			}
+			m_validTiles.push_back(pQuery);
+		}
 		//// 1 Move Forward
 		//// 2 Move Forward if in starting square
 		//// EnPassant if 2 squares forward, and opposing pawn is adjacent to us after moving 2 squares
+		
+		//int validPawnTargetIDs[4] =
+		//{
+		//	0,0,0,0
+		//};
+		//validPawnTargetIDs[0] = tileId
+		//
 		//for (int i = x - 2; i < x + 1; i++)
 		//{
 		//	for (int j = y - 2; j < y; j++)

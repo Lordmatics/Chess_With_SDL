@@ -78,16 +78,21 @@ void Piece::Render(SDL_Renderer* pRenderer)
 	if (IsSelected())
 		return;
 
-	RenderAsSelected(pRenderer);
+	RenderAsSelected(pRenderer, true);
 }
 
-void Piece::RenderAsSelected(SDL_Renderer* pRenderer)
+void Piece::RenderAsSelected(SDL_Renderer* pRenderer, bool internal)
 {
 	SDL_Rect& transform = GetTransform();
 	NMSprite& sprite = GetSprite();
 	if (SDL_Texture* pTexture = sprite.GetTexture())
 	{
 		SDL_RenderCopy(pRenderer, pTexture, nullptr, &transform);
+	}
+
+	if (!internal)
+	{
+
 	}
 }
 
@@ -187,4 +192,43 @@ void Piece::Init(SDL_Renderer* pRenderer, int i, int j, ChessUser* pOwner)
 void Piece::SetSelected(bool val)
 {
 	m_bSelected = val;
+}
+
+bool Piece::CanCapture(Piece* pTargetPiece)
+{
+	if (pTargetPiece)
+	{
+		uint32_t myFlags = GetFlags();
+		const bool targetIsWhite = pTargetPiece->GetFlags() & (uint32_t)Piece::PieceFlag::White;
+		const bool ownerIsWhite = myFlags & (uint32_t)Piece::PieceFlag::White;
+		if (ownerIsWhite == targetIsWhite)
+		{
+			// Friendly piece, ignore
+			return false;
+		}
+
+		// Need to apply PieceRules
+		if (myFlags & (uint32_t)Piece::PieceFlag::Pawn)
+		{
+			// Diagonal Coordinates or Enpassant
+			Coordinate myCoord = GetCoordinate();
+			Coordinate targetCoord = pTargetPiece->GetCoordinate();
+			if (myCoord.m_x == targetCoord.m_x)
+			{
+				// In the same column, ignore
+				return false;
+			}
+			//else if(myCoord.m_y)
+		}
+	}
+	return true;
+}
+
+bool Piece::IsSouthPlaying() const
+{
+	if (ChessUser* pOwner = m_pOwner)
+	{
+		return pOwner->GetSide() == ChessUser::BOTTOM;
+	}
+	return true;
 }

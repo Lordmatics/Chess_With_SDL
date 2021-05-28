@@ -113,22 +113,39 @@ void GameLoop::HandleEvents()
 				m_LMBD = true;
 				for (int i = 0; i < Board::m_iColumns ; i++)
 				{
-
-					if (Piece* pTile = m_board.GetPieceAtPoint(&m_mousePosition))
+					if (Tile* pTile = m_board.GetTileAtPoint(&m_mousePosition))
 					{
-						//Tile& pawn = m_player.GetPawns()[i];
 						if (SDL_Rect* pawnTransform = &pTile->GetTransform())
 						{
 							if (SDL_PointInRect(&m_mousePosition, pawnTransform))
 							{
-								m_resetPos = pTile->GetTransform();
-								m_pSelectedRect = pawnTransform;
-								m_pSelectedPiece = pTile;
-								m_pSelectedPiece->SetSelected(true);
+								if (Piece* pOccupant = pTile->GetPiece())
+								{
+									m_resetPos = pOccupant->GetTransform();
+									m_pSelectedRect = &pOccupant->GetTransform();
+									m_pSelectedPiece = pOccupant;
+									m_pSelectedPiece->SetSelected(true);
+								}
+	
 								break;
 							}
 						}
 					}
+					//if (Piece* pTile = m_board.GetPieceAtPoint(&m_mousePosition))
+					//{
+					//	//Tile& pawn = m_player.GetPawns()[i];
+					//	if (SDL_Rect* pawnTransform = &pTile->GetTransform())
+					//	{
+					//		if (SDL_PointInRect(&m_mousePosition, pawnTransform))
+					//		{
+					//			m_resetPos = pTile->GetTransform();
+					//			m_pSelectedRect = pawnTransform;
+					//			m_pSelectedPiece = pTile;
+					//			m_pSelectedPiece->SetSelected(true);
+					//			break;
+					//		}
+					//	}
+					//}
 
 
 
@@ -143,7 +160,7 @@ void GameLoop::HandleEvents()
 					//	break;
 					//}
 				}
-				//m_board.GenerateLegalMoves(m_pSelectedPiece);
+				m_board.GenerateLegalMoves(m_pSelectedPiece);
 			}
 
 			volatile int i = 5;
@@ -160,13 +177,17 @@ void GameLoop::HandleEvents()
 					m_pSelectedRect->x = m_resetPos.x;
 					m_pSelectedRect->y = m_resetPos.y;
 
-					m_board.ClearLegalMoves();
 				}
+				
+				m_board.ClearLegalMoves();
 
 				m_pSelectedRect = nullptr;
 				
-				m_pSelectedPiece->SetSelected(false);
-				m_pSelectedPiece = nullptr;
+				if (Piece* pSelected = m_pSelectedPiece)
+				{
+					pSelected->SetSelected(false);
+					pSelected = nullptr;
+				}
 
 			}
 			break;
@@ -178,6 +199,14 @@ void GameLoop::HandleEvents()
 			// TODO: Be nice to change this to an actual texture highlight - white boarder or so.
 			if (Tile* pTile = m_board.GetTileAtPoint(&m_mousePosition))
 			{
+				auto Predicate = [&pTile](Tile* pOtherTile)
+				{
+					return pTile == pOtherTile;
+				};
+				if (m_board.TileMatch(Predicate))
+				{
+					return;
+				}
 				NMSprite& sprite = pTile->GetSprite();
 				if (SDL_Texture* pTexture = sprite.GetTexture())
 				{

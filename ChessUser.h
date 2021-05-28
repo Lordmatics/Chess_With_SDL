@@ -15,7 +15,8 @@ public:
 	enum Side
 	{
 		BOTTOM,
-		TOP
+		TOP,
+		UNKNOWN
 	};
 
 	bool IsWhite() const { return m_bIsWhite; }
