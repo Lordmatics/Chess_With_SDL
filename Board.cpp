@@ -26,6 +26,35 @@ void Board::AddPiece(int boardID, Piece* object)
 	object->Debug();
 }
 
+bool Board::CheckPiece(Piece* pSelectedPiece, const Coordinate& coord)
+{
+	Coordinate pieceCoord = pSelectedPiece->GetCoordinate();
+	//Coordinate coord;
+
+	bool isWhite = pSelectedPiece->GetFlags() & (uint32_t)Piece::PieceFlag::White;
+
+	const int leftTile = GetTileIDFromCoord(coord);
+	if (Tile* pTile = GetTile(leftTile))
+	{
+		if (Piece* pPiece = pTile->GetPiece())
+		{
+			bool targetIsWhite = pPiece->GetFlags() & (uint32_t)Piece::PieceFlag::White;
+			if (targetIsWhite == isWhite)
+			{
+				return false;
+			}
+			else
+			{
+				m_validTiles.push_back(pTile);
+				return false;
+			}
+		}
+		m_validTiles.push_back(pTile);
+		return true;
+	}
+	return false;
+}
+
 std::map<Piece::PieceFlag, Board::PiecePaths> Board::m_pieceMap =
 {
 	{ Piece::PieceFlag::Pawn, { "Assets/Images/w_pawn.png", "Assets/Images/b_pawn.png"} },
@@ -248,243 +277,6 @@ void Board::Init(SDL_Renderer* pRenderer)
 			m_players[i]->Init(pRenderer, this);
 		}
 	}	
-
-	//for (int i = 0; i < m_iRows; i++)
-	//{
-	//	for (int j = 0; j < m_iColumns; j++)
-	//	{
-	//		Tile& pieceTileRef = m_board[i + j * 8];
-	//		pieceTileRef.SetSize(96, 96);
-	//		pieceTileRef.SetBoardID(i, j);
-
-	//		Tile& object = m_backgroundTiles[i][j];
-	//		object.SetSize(tileSize, tileSize);
-	//		object.SetBoardID(i, j);
-	//		NMSprite& sprite = object.GetSprite();
-	//		SDL_Rect& transform = object.GetTransform();
-	//		if (j % 2 == 0)
-	//		{
-	//			if (i % 2 != 0)
-	//			{
-	//				// While J is even, and I is Odd
-	//				// Add Light Tile
-	//				sprite.AssignSprite(pRenderer, m_tileMap[Board::TileType::TILEL]);					
-	//			}
-	//			else
-	//			{
-	//				// While J is even, and I is even
-	//				sprite.AssignSprite(pRenderer, m_tileMap[Board::TileType::TILED]);
-
-	//			}
-	//		}
-	//		else
-	//		{
-	//			if (i % 2 == 0)
-	//			{
-	//				// While J is even, and I is Odd
-	//				// Add Light Tile
-	//				sprite.AssignSprite(pRenderer, m_tileMap[Board::TileType::TILEL]);
-	//			}
-	//			else
-	//			{
-	//				sprite.AssignSprite(pRenderer, m_tileMap[Board::TileType::TILED]);
-	//			}
-	//		}
-	//		int xPos = xOffset + (i * tileSize);
-	//		int yPos = yOffset + (j * tileSize);
-	//		object.SetPos(xPos, yPos);
-	//		pieceTileRef.SetPos(xPos, yPos);
-	//		object.SetFlags((uint32_t)Piece::PieceFlag::None);
-	//		pieceTileRef.SetFlags((uint32_t)Piece::PieceFlag::None);
-	//	}
-	//}
-
-
-	//// Build Pieces
-	//const int pieceSize = 96;
-	//const int pawnSize = 76;
-	//const int innerTilePieceOffset = 16;
-	//const int innerTilePawnOffset = 26;
-
-	//uint32_t colour = (uint32_t)Piece::PieceFlag::Black;
-	//int pathID = 1;
-	//for (int i = 0; i < 8 ; i++)
-	//{
-	//	//m_board[i].SetBoardID(i, 0);
-	//	Tile& tile = m_board[i];
-	//	NMSprite& sprite = tile.GetSprite();
-	//	tile.SetSize(pieceSize, pieceSize);
-	//	const int buffer = innerTilePieceOffset;
-	//	int xPos = xOffset + buffer + (i * tileSize);
-	//	//if (south)
-	//	//{
-	//	//	int yPos = yOffset + buffer + ((i + 6) * tileSize);
-	//	//	object.SetPos(xPos, yPos);
-	//	//}
-	//	//else
-	//	{
-	//		//int yPos = 0;
-	//		//if (i == 0)
-	//		//{
-	//		//int yPos = yOffset + buffer + (i + 1) * tileSize;
-	//		//}
-	//		//else
-	//		//{
-	//		//	yPos = yOffset + buffer + (i - 1) * tileSize;
-	//		//}
-	//		tile.SetPos(xPos, tile.GetTransform().y + yOffset / 2);
-	//	}
-
-	//	if (i == 0 || i == Board::m_iColumns - 1)
-	//	{
-	//		sprite.AssignSprite(pRenderer, Board::m_pieceMap[Piece::PieceFlag::Rook].m_paths[pathID]);
-	//		tile.SetFlags((uint32_t)Piece::PieceFlag::Rook | colour);
-	//	}
-	//	else if (i == 1 || i == Board::m_iColumns - 2)
-	//	{
-	//		sprite.AssignSprite(pRenderer, Board::m_pieceMap[Piece::PieceFlag::Horse].m_paths[pathID]);
-	//		tile.SetFlags((uint32_t)Piece::PieceFlag::Horse | colour);
-	//	}
-	//	else if (i == 2 || i == Board::m_iColumns - 3)
-	//	{
-	//		sprite.AssignSprite(pRenderer, Board::m_pieceMap[Piece::PieceFlag::Bishop].m_paths[pathID]);
-	//		tile.SetFlags((uint32_t)Piece::PieceFlag::Bishop | colour);
-	//	}
-	//	else if (i == 3)
-	//	{
-	//		sprite.AssignSprite(pRenderer, Board::m_pieceMap[Piece::PieceFlag::Queen].m_paths[pathID]);
-	//		tile.SetFlags((uint32_t)Piece::PieceFlag::Queen | colour);
-	//	}
-	//	else if (i == 4)
-	//	{
-	//		sprite.AssignSprite(pRenderer, Board::m_pieceMap[Piece::PieceFlag::King].m_paths[pathID]);
-	//		tile.SetFlags((uint32_t)Piece::PieceFlag::King | colour);
-	//	}
-	//}
-
-	//// ^^^ Correct sort of
-	////return;
-	//for (int i = 8; i < 16 ; i++)
-	//{
-	//	//m_board[i].SetBoardID(i - 8, 1);
-	//	Tile& tile = m_board[i];
-	//	NMSprite& sprite = tile.GetSprite();
-	//	tile.SetSize(pawnSize, pawnSize);
-	//	const int buffer = innerTilePawnOffset;
-	//	int j = 15 - i;
-	//	int xPos = xOffset + buffer + (j * tileSize);
-	//	//if (south)
-	//	//{
-	//	//	int yPos = yOffset + buffer + ((i + 6) * tileSize);
-	//	//	object.SetPos(xPos, yPos);
-	//	//}
-	//	//else
-	//	{
-	//		//int yPos = 0;
-	//		//if (i == 0)
-	//		//{
-	//		//int yPos = yOffset + buffer + (i + 1) * tileSize;
-	//		//}
-	//		//else
-	//		//{
-	//		//	yPos = yOffset + buffer + (i - 1) * tileSize;
-	//		//}
-	//		tile.SetPos(xPos, tile.GetTransform().y + yOffset);
-	//	}
-
-	//	sprite.AssignSprite(pRenderer, Board::m_pieceMap[Piece::PieceFlag::Pawn].m_paths[pathID]);
-	//	tile.SetFlags((uint32_t)Piece::PieceFlag::Pawn | colour);
-	//}
-
-	////return;
-	//pathID = 0;
-
-	//for (int i = 48; i < 56; i++)
-	//{
-	//	//m_board[i].SetBoardID(i - 8, 1);
-	//	Tile& tile = m_board[i];
-	//	NMSprite& sprite = tile.GetSprite();
-	//	tile.SetSize(pawnSize, pawnSize);
-	//	const int buffer = innerTilePawnOffset;
-	//	int j = 55 - i;
-	//	int xPos = xOffset + buffer + (j * tileSize);
-	//	//if (south)
-	//	//{
-	//	//	int yPos = yOffset + buffer + ((i + 6) * tileSize);
-	//	//	object.SetPos(xPos, yPos);
-	//	//}
-	//	//else
-	//	{
-	//		//int yPos = 0;
-	//		//if (i == 0)
-	//		//{
-	//		//int yPos = yOffset + buffer + (i + 1) * tileSize;
-	//		//}
-	//		//else
-	//		//{
-	//		//	yPos = yOffset + buffer + (i - 1) * tileSize;
-	//		//}
-	//		tile.SetPos(xPos, tile.GetTransform().y + yOffset);
-	//	}
-	//	sprite.AssignSprite(pRenderer, Board::m_pieceMap[Piece::PieceFlag::Pawn].m_paths[pathID]);
-	//	tile.SetFlags((uint32_t)Piece::PieceFlag::Pawn | colour);
-	//}
-
-	//for (int i = 56; i < 64; i++)
-	//{
-	//	//m_board[i].SetBoardID(i, 0);
-	//	Tile& tile = m_board[i];
-	//	NMSprite& sprite = tile.GetSprite();
-	//	tile.SetSize(pieceSize, pieceSize);
-	//	const int buffer = innerTilePieceOffset;
-	//	int j = 63 - i;
-
-	//	int xPos = xOffset + buffer + (j * tileSize);
-	//	//if (south)
-	//	//{
-	//	//	int yPos = yOffset + buffer + ((i + 6) * tileSize);
-	//	//	object.SetPos(xPos, yPos);
-	//	//}
-	//	//else
-	//	{
-	//		//int yPos = 0;
-	//		//if (i == 0)
-	//		//{
-	//		//int yPos = yOffset + buffer + (i + 1) * tileSize;
-	//		//}
-	//		//else
-	//		//{
-	//		//	yPos = yOffset + buffer + (i - 1) * tileSize;
-	//		//}
-	//		tile.SetPos(xPos, tile.GetTransform().y + yOffset / 2);
-	//	}
-
-	//	if (j == 0 || j == Board::m_iColumns - 1)
-	//	{
-	//		sprite.AssignSprite(pRenderer, Board::m_pieceMap[Piece::PieceFlag::Rook].m_paths[pathID]);
-	//		tile.SetFlags((uint32_t)Piece::PieceFlag::Rook | colour);
-	//	}
-	//	else if (j == 1 || j == Board::m_iColumns - 2)
-	//	{
-	//		sprite.AssignSprite(pRenderer, Board::m_pieceMap[Piece::PieceFlag::Horse].m_paths[pathID]);
-	//		tile.SetFlags((uint32_t)Piece::PieceFlag::Horse | colour);
-	//	}
-	//	else if (j == 2 || j == Board::m_iColumns - 3)
-	//	{
-	//		sprite.AssignSprite(pRenderer, Board::m_pieceMap[Piece::PieceFlag::Bishop].m_paths[pathID]);
-	//		tile.SetFlags((uint32_t)Piece::PieceFlag::Bishop | colour);
-	//	}
-	//	else if (j == 3)
-	//	{
-	//		sprite.AssignSprite(pRenderer, Board::m_pieceMap[Piece::PieceFlag::Queen].m_paths[pathID]);
-	//		tile.SetFlags((uint32_t)Piece::PieceFlag::Queen | colour);
-	//	}
-	//	else if (j == 4)
-	//	{
-	//		sprite.AssignSprite(pRenderer, Board::m_pieceMap[Piece::PieceFlag::King].m_paths[pathID]);
-	//		tile.SetFlags((uint32_t)Piece::PieceFlag::King | colour);
-	//	}
-	//}
 }
 
 void Board::Render(SDL_Renderer* pRenderer)
@@ -494,19 +286,6 @@ void Board::Render(SDL_Renderer* pRenderer)
 		std::cout << "Board failed to render - Missing SDL_Renderer!" << std::endl;
 		return;
 	}
-
-	//for (int i = 0; i < m_iRows; i++)
-	//{
-	//	for (int j = 0; j < m_iColumns; j++)
-	//	{
-	//		SDL_Rect& transform = m_backgroundTiles[i][j].GetTransform();
-	//		NMSprite& sprite = m_backgroundTiles[i][j].GetSprite();
-	//		if (SDL_Texture* pTexture = sprite.GetTexture())
-	//		{
-	//			SDL_RenderCopy(pRenderer, pTexture, nullptr, &transform);
-	//		}
-	//	}
-	//}
 
 	for (int i = 0; i < 64; i++)
 	{
@@ -576,7 +355,6 @@ void Board::GenerateLegalPawnMoves(int x, int y, bool isSouth, Piece* pSelectedP
 			if (!hasMoved)
 			{
 				// If we're stationary check for double move
-				// TODO: Check For Obstructed
 				int id = GetTileIDFromCoord({ i, targetY });
 				if (Tile* pTile = GetTile(id))
 				{
@@ -740,41 +518,28 @@ void Board::GenerateLegalPawnMoves(int x, int y, bool isSouth, Piece* pSelectedP
 
 void Board::GenerateLegalKingMoves(int x, int y, bool isSouth, Piece* pSelectedPiece)
 {
+	Coordinate pieceCoord = pSelectedPiece->GetCoordinate();
 
 }
 
 void Board::GenerateLegalHorseMoves(int x, int y, bool isSouth, Piece* pSelectedPiece)
 {
+	Coordinate pieceCoord = pSelectedPiece->GetCoordinate();
 
 }
 
 void Board::GenerateLegalBishopMoves(int x, int y, bool isSouth, Piece* pSelectedPiece)
 {
-	const int totalCoords = 6;
-	CoordSet valiCoords[totalCoords] = { };
-	int counter = 0;
-	int targetY = isSouth ? y - 1 : y + 1;
-	int exceptions = 0;
-	bool bCheckEnpassant = false;
+	//const int totalCoords = 6;
+	//CoordSet valiCoords[totalCoords] = { };
+	//int counter = 0;
+	//int targetY = isSouth ? y - 1 : y + 1;
+	//int exceptions = 0;
+	//bool bCheckEnpassant = false;
 	Coordinate pieceCoord = pSelectedPiece->GetCoordinate();
-	const int pieceY = pieceCoord.m_y;
-	const bool side = pSelectedPiece->IsSouthPlaying();
-	const bool hasMoved = pSelectedPiece->HasMoved();
-	if (side)
-	{
-		if (pieceY == 3)
-		{
-			bCheckEnpassant = true;
-		}
-	}
-	else
-	{
-		if (pieceY == 4)
-		{
-			bCheckEnpassant = true;
-		}
-	}
-	bool allExceptions = true;
+	//const int pieceY = pieceCoord.m_y;
+	//const bool side = pSelectedPiece->IsSouthPlaying();
+	//const bool hasMoved = pSelectedPiece->HasMoved();
 
 	auto CheckBishop = [&](bool& bObstructed, Coordinate diagonalCoord, Coordinate rule)
 	{
@@ -898,11 +663,116 @@ void Board::GenerateLegalBishopMoves(int x, int y, bool isSouth, Piece* pSelecte
 
 void Board::GenerateLegalRookMoves(int x, int y, bool isSouth, Piece* pSelectedPiece)
 {
+	Coordinate pieceCoord = pSelectedPiece->GetCoordinate();
+	Coordinate coord;
 
+	//bool isWhite = pSelectedPiece->GetFlags() & (uint32_t)Piece::PieceFlag::White;
+	// Check Horizontals
+	int left = x - 1;
+	while (true)
+	{
+		if (left < 0)
+			break;
+
+		coord.m_x = left;
+		coord.m_y = y;
+		if (!CheckPiece(pSelectedPiece, coord))
+		{
+			break;
+		}
+		left--;
+	}
+
+	int right = x + 1;
+	while (true)
+	{
+		if (right >= 8)
+			break;
+
+		coord.m_x = right;
+		coord.m_y = y;
+		if (!CheckPiece(pSelectedPiece, coord))
+		{
+			break;
+		}
+		right++;
+	}
+
+	int up = y - 1;
+	while (true)
+	{
+		if (up < 0)
+			break;
+
+		coord.m_x = x;
+		coord.m_y = up;
+		if (!CheckPiece(pSelectedPiece, coord))
+		{
+			break;
+		}
+		up--;
+	}
+
+	int down = y + 1;
+	while (true)
+	{
+		if (down >= 8)
+			break;
+
+		coord.m_x = x;
+		coord.m_y = down;
+		if (!CheckPiece(pSelectedPiece, coord))
+		{
+			break;
+		}
+		down++;
+	}
+
+	//for (int i = 0; i < 2; i++)
+	//{
+	//	// For each direction N E S W
+	//	// Scan the lines, starting from (x,y)
+	//	for (int j = 0; j < 8 ; j++)
+	//	{
+	//		if (i % 2 == 0)
+	//		{
+	//			if (j == x)
+	//			{
+	//				// Exclude starting square
+	//				continue;
+	//			}
+	//			coord.m_x = j;
+	//			coord.m_y = y;
+	//		}
+	//		else
+	//		{
+	//			if (i == y)
+	//			{
+	//				// Exclude starting square
+	//				continue;
+	//			}
+	//			coord.m_x = x;
+	//			coord.m_y = j;
+	//		}
+	//		const int id = GetTileIDFromCoord(coord);
+	//		if (Tile* pTile = GetTile(id))
+	//		{
+	//			if (Piece* pPiece = pTile->GetPiece())
+	//			{
+	//				// Ignore pieces;
+	//				continue;
+	//			}
+	//			m_validTiles.push_back(pTile);
+	//		}
+	//	}
+	//	int boardIndex = x;
+	//	//m_board[]
+	//}
 }
 
 void Board::GenerateLegalQueenMoves(int x, int y, bool isSouth, Piece* pSelectedPiece)
 {
+	Coordinate pieceCoord = pSelectedPiece->GetCoordinate();
 
 }
 

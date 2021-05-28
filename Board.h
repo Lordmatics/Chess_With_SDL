@@ -56,6 +56,7 @@ public:
 	int GetTileIDFromCoord(const Coordinate& coord) const;
 	void AddPiece(int boardID, Piece* object);
 
+	bool CheckPiece(Piece* pSelectedPiece, const Coordinate& coord);
 	template<class Function>
 	bool TileMatch(const Function& Predicate, int validList = 1);
 
