@@ -214,12 +214,12 @@ Board::~Board()
 
 }
 
-void Board::Init(SDL_Renderer* pRenderer)
+bool Board::Init(SDL_Renderer* pRenderer)
 {
 	if (!pRenderer)
 	{
 		std::cout << "Board failed to initialize - Missing SDL_Renderer!" << std::endl;
-		return;
+		return false;
 	}
 
 	// TODO: Make these more consistent dependant on resolution
@@ -267,6 +267,7 @@ void Board::Init(SDL_Renderer* pRenderer)
 			m_players[i]->Init(pRenderer, this);
 		}
 	}	
+	return m_players[0]->IsWhite();
 }
 
 void Board::Render(SDL_Renderer* pRenderer)
@@ -481,11 +482,22 @@ void Board::GenerateLegalPawnMoves(int x, int y, bool isSouth, Piece* pSelectedP
 									return;
 								}
 							}
-							m_validTiles.push_back(pQuery);
-							added = true;
-							break;
+
+							if (Piece* pPrevPiece = m_pPreviousMovedPiece)
+							{
+								if (pTargetPiece == pPrevPiece)
+								{
+									// Only allow Enpassant, IF they just moved it
+									// else it becomes an invalid move									 
+									m_validTiles.push_back(pQuery);
+									added = true;
+									break;
+								}
+							}
 						}
 					}
+					continue;
+
 					if(added)
 						continue;
 				}
@@ -519,8 +531,124 @@ void Board::GenerateLegalKingMoves(int x, int y, bool isSouth, Piece* pSelectedP
 		{ 0,   1},
 		{ 1,   0},
 		{ -1,  0}
-	};
+	};	
 
+
+	const bool hasMoved = pSelectedPiece->HasMoved();
+	const bool isSouthPlaying = pSelectedPiece->IsSouthPlaying();
+	const int tileIDOfKing = GetTileIDFromCoord(pieceCoord);
+	Tile* pKingTile = GetTile(tileIDOfKing);
+	if (!pKingTile)
+		return;
+
+	// If the king hasn't moved
+	bool checkCastle = !hasMoved;
+	if (checkCastle)
+	{
+		if (isSouthPlaying)
+		{
+			Tile& rookTileC = m_board[63];
+			Tile& rookTileD = m_board[56];
+			// Determine if rooks are present AND unmoved
+
+			if (rookTileC.HasMoved() && rookTileD.HasMoved())
+			{
+				checkCastle = false;
+			}
+
+			if (checkCastle)
+			{
+				if (!rookTileC.HasMoved())
+				{
+					bool hasLOS = true;
+					for (int i = tileIDOfKing + 1; i < 63; i++)
+					{
+						if (Piece* pObstruction = m_board[i].GetPiece())
+						{
+							// Cannot castle this way
+							hasLOS = false;
+							break;
+						}
+					}
+
+					if (hasLOS)
+					{
+						m_validTiles.push_back(&m_board[62]);
+					}
+
+				}
+				if (!rookTileD.HasMoved())
+				{
+					bool hasLos = true;
+					for (int i = 57; i < tileIDOfKing; i++)
+					{
+						if (Piece* pObstruction = m_board[i].GetPiece())
+						{
+							// Cannot castle this way
+							hasLos = false;
+							break;
+						}
+					}
+					if (hasLos)
+					{
+						m_validTiles.push_back(&m_board[58]);
+					}
+				}
+			}
+
+			// Determine if we have line of sight to the rooks
+		}
+		else
+		{
+			Tile& rookTileA = m_board[7];
+			Tile& rookTileB = m_board[0];
+			if (rookTileA.HasMoved() && rookTileB.HasMoved())
+			{
+				checkCastle = false;
+			}
+
+			if (checkCastle)
+			{
+				if (!rookTileA.HasMoved())
+				{
+					bool hasLOS = true;
+					for (int i = tileIDOfKing + 1; i < 7; i++)
+					{
+						if (Piece* pObstruction = m_board[i].GetPiece())
+						{
+							// Cannot castle this way
+							hasLOS = false;
+							break;
+						}
+					}
+
+					if (hasLOS)
+					{						
+						m_validTiles.push_back(&m_board[6]);
+					}
+				}
+				if (!rookTileB.HasMoved())
+				{
+					bool hasLos = true;
+					for (int i = 1; i < tileIDOfKing; i++)
+					{
+						if (Piece* pObstruction = m_board[i].GetPiece())
+						{
+							// Cannot castle this way
+							hasLos = false;
+							break;
+						}
+					}
+					if (hasLos)
+					{
+						m_validTiles.push_back(&m_board[2]);
+					}
+				}
+			}
+		}
+	}
+	
+	// Check if rook has moved if visible
 	Coordinate temp = pieceCoord;
 	for (int i = 0; i < 8; i++)
 	{
@@ -758,47 +886,6 @@ void Board::GenerateLegalRookMoves(int x, int y, bool isSouth, Piece* pSelectedP
 		}
 		down++;
 	}
-
-	//for (int i = 0; i < 2; i++)
-	//{
-	//	// For each direction N E S W
-	//	// Scan the lines, starting from (x,y)
-	//	for (int j = 0; j < 8 ; j++)
-	//	{
-	//		if (i % 2 == 0)
-	//		{
-	//			if (j == x)
-	//			{
-	//				// Exclude starting square
-	//				continue;
-	//			}
-	//			coord.m_x = j;
-	//			coord.m_y = y;
-	//		}
-	//		else
-	//		{
-	//			if (i == y)
-	//			{
-	//				// Exclude starting square
-	//				continue;
-	//			}
-	//			coord.m_x = x;
-	//			coord.m_y = j;
-	//		}
-	//		const int id = GetTileIDFromCoord(coord);
-	//		if (Tile* pTile = GetTile(id))
-	//		{
-	//			if (Piece* pPiece = pTile->GetPiece())
-	//			{
-	//				// Ignore pieces;
-	//				continue;
-	//			}
-	//			m_validTiles.push_back(pTile);
-	//		}
-	//	}
-	//	int boardIndex = x;
-	//	//m_board[]
-	//}
 }
 
 void Board::GenerateLegalQueenMoves(int x, int y, bool isSouth, Piece* pSelectedPiece)
@@ -835,8 +922,17 @@ Tile* Board::GetTile(int id)
 	}
 }
 
-void Board::RunAI(bool& m_playersTurn)
+void Board::SetPreviouslyMoved(Piece* pSelectedPiece)
 {
-	m_opponent.MakeMove();
+	pSelectedPiece->SetMoved(true);
+	m_pPreviousMovedPiece = pSelectedPiece;
+}
+
+void Board::RunAI(SDL_Renderer* pRenderer, bool& m_playersTurn)
+{
+	if (Piece* pPieceToMove = m_opponent.MakeMove(pRenderer))
+	{
+		SetPreviouslyMoved(pPieceToMove);
+	}
 	m_playersTurn = true;
 }

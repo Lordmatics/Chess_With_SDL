@@ -37,6 +37,8 @@ private:
 	bool m_bPadding : 7;
 	int m_iFrameCount;
 
+	bool m_bIgnorePress;
+	bool m_bPlayerIsWhite;
 	Board m_board;
 
 	bool m_LMBD;
@@ -48,5 +50,6 @@ private:
 	SDL_Rect m_resetPos;
 	Tile* m_pPiecesTile;
 	Piece* m_pSelectedPiece;
+	void ClearInput();
 };
 

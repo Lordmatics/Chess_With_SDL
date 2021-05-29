@@ -7,7 +7,7 @@ public:
 
 	BasicAI();
 	virtual ~BasicAI();
-
-	void MakeMove();
+	
+	Piece* MakeMove(SDL_Renderer* pRenderer);
 };
 

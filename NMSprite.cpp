@@ -35,6 +35,12 @@ void NMSprite::AssignSprite(SDL_Renderer* pRenderer, const char* path)
 		std::cout << "Failed to Load Image: " << path << std::endl;
 		return;
 	}
+
+	if (m_pTexture)
+	{
+		SDL_DestroyTexture(m_pTexture);
+	}
+
 	m_spriteResourceFilePath = path;
 	m_pTexture = SDL_CreateTextureFromSurface(pRenderer, pTMPSurface);
 	SDL_FreeSurface(pTMPSurface);

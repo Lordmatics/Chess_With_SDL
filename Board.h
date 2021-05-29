@@ -29,7 +29,7 @@ public:
 		TILED
 	};
 
-	void Init(SDL_Renderer* pRenderer);
+	bool Init(SDL_Renderer* pRenderer);
 
 	void Render(SDL_Renderer* pRenderer);
 	
@@ -72,6 +72,7 @@ public:
 	void Test();
 
 	Tile* GetTile(int id);
+	void SetPreviouslyMoved(Piece* pSelectedPiece);
 private:
 	//Tile m_backgroundTiles[8][8];
 	Tile m_board[64]; // Generate the 32 pieces in here, and leave the rest of the tiles intiialised as NONE
@@ -80,8 +81,9 @@ private:
 	Player m_player;
 	BasicAI m_opponent;
 	ChessUser* m_players[MAX_NUM_PLAYERS]; 
+	Piece* m_pPreviousMovedPiece;
 public:
-	void RunAI(bool& m_playersTurn);
+	void RunAI(SDL_Renderer* pRenderer, bool& m_playersTurn);
 };
 
 template<class Function>

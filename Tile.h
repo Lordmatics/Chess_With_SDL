@@ -18,8 +18,7 @@ public:
 	void RenderLegalHighlight(SDL_Renderer* pRenderer);
 	void ResetLegalHighlight();
 
-	void SetMoved() { m_bHasMoved = true; }
-	bool HasMoved() const { return m_bHasMoved; }
+	bool HasMoved() const;
 
 	void SetBoardIndex(int i) { m_iBoardIndex = i; }
 	int GetBoardIndex() const { return m_iBoardIndex; }
@@ -44,8 +43,8 @@ private:
 
 	Piece* m_occupiedPiece;
 	int m_iBoardIndex;
-	bool m_bHasMoved;
 public:
 	float Score(Piece& piece);
+	const bool IsPromotionSquare();
 };
 

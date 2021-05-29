@@ -6,8 +6,7 @@
 Tile::Tile() :
 	apiObject(),
 	m_iBoardIndex(-1),
-	m_occupiedPiece(nullptr),
-	m_bHasMoved(false)
+	m_occupiedPiece(nullptr)
 {
 
 }
@@ -189,6 +188,15 @@ void Tile::ResetLegalHighlight()
 	}
 }
 
+bool Tile::HasMoved() const
+{
+	if (Piece* pPiece = m_occupiedPiece)
+	{
+		return pPiece->HasMoved();
+	}
+	return true;
+}
+
 void Tile::Render(SDL_Renderer* pRenderer)
 {
 	RenderPiece(pRenderer);
@@ -218,15 +226,32 @@ float Tile::Score(Piece& piece)
 	const bool isWhite = piece.GetFlags() & (uint32_t)Piece::PieceFlag::White;
 	const bool isSouthPlaying = piece.IsSouthPlaying();
 	const Coordinate& coord = piece.GetCoordinate();
-
+	const Coordinate& tileCoord = GetCoordinate();
+	// Encourage Centre Play
+	// TODO: Needs depth
+	// TODO: Needs concept of attacking squares
+	// TODO: Need to implement Checks / Fossils / Pins / Discovered Checks
+	float centreScore = isSouthPlaying ? 1.0f / (tileCoord.m_y + 1) : 1.0f / (8 - tileCoord.m_y);
 	if (Piece* pOccupant = GetPiece())
 	{
 		// Would be a capture
 
-		return 5.0f * pOccupant->GetValue();
+		return centreScore + 1.0f * pOccupant->GetValue();
 	}
 	else
 	{
-		return 1.0f;
+		return 1.0f + centreScore;
 	}
+}
+
+const bool Tile::IsPromotionSquare()
+{
+	const Coordinate& coord = GetCoordinate();
+	{
+		if (coord.m_y == 7 || coord.m_y == 0)
+		{
+			return true;
+		}
+	}
+	return false;
 }

@@ -3,6 +3,8 @@
 #include <map>
 
 class ChessUser;
+class Tile;
+class Board;
 class Piece :
 	public apiObject
 {
@@ -49,13 +51,18 @@ public:
 	bool IsCaptured() const { return m_bCaptured; }
 	void SetCaptured(bool val) { m_bCaptured = val; }
 
-	const bool HasMoved() const;
+	void SetMoved(bool val) { m_bHasMoved = val; }
+	const bool HasMoved() const { return m_bHasMoved; }
+	void CheckEnpassant(const Tile& tile, Board& board);
+	void CheckCastling(const Tile& pTile, Board& m_board);
 private:
 	ChessUser* m_pOwner;
 	uint32_t m_pieceflags;	
 	bool m_bSelected;
 	bool m_bCaptured;
+	bool m_bHasMoved;
 public:
 	int GetValue() const;
+	void Promote(SDL_Renderer* pRenderer);
 };
 

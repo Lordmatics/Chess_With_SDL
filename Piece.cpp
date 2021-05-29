@@ -254,26 +254,7 @@ void Piece::Init(SDL_Renderer* pRenderer, int i, int j, ChessUser* pOwner)
 	const int pawnSize = 76;
 	const int size = pawnConfig ? pawnSize : pieceSize;
 	SetSize(size, size);
-	//const int innerTilePieceOffset = 16;
-	//const int innerTilePawnOffset = 26;
-	//const int buffer = pawnConfig ? innerTilePawnOffset : innerTilePieceOffset;
-	//const int xOffset = 896 / 2; // Quarter X Reso
-	//const int yOffset = 28; // Each tile is 128, so 128 * 8 = 1024. reso = 1920:1080, so 1080 - 1024 = 56, then half top/bot, so 28 each side
-	//const int tileSize = 128;
-	//int xPos = xOffset + buffer + (j * tileSize);
-	//if (south)
-	//{
-	//	int yPos = yOffset + buffer + ((i + 6) * tileSize);
-	//	SetPos(xPos, yPos);
-	//}
-	//else
-	//{
-	//	int yPos = yOffset + buffer + (i * tileSize);
-	//	SetPos(xPos, yPos);
-	//}
-	//SetPos(0, 0);
 	UpdatePosFromCoord();
-	//Debug();
 }
 
 void Piece::SetSelected(bool val)
@@ -339,25 +320,120 @@ bool Piece::IsSouthPlaying() const
 	return true;
 }
 
-const bool Piece::HasMoved() const
+void Piece::CheckEnpassant(const Tile& tileToCapture, Board& board)
 {
-	const Coordinate& coord = GetCoordinate();
-	const bool side = IsSouthPlaying();
-	const bool isPawn = GetFlags() & (uint32_t)Piece::PieceFlag::Pawn;
-	if (side)
+	const bool isAPawn = GetFlags() & (uint32_t)Piece::PieceFlag::Pawn;
+	if(!isAPawn)
 	{
-		// If we're playing on the bottom
-		// We haven't moved if we're on the 6th or 7th row depending on piece
-		const int rowToCompare = isPawn ? 6 : 7;
-		return coord.m_y != rowToCompare;
+		return;
+	}
+
+	Coordinate targetTile = tileToCapture.GetCoordinate();
+	Coordinate myCoord = GetCoordinate();
+	const bool side = IsSouthPlaying();
+	const int extra = side ? -1 : 1;
+	if (targetTile.m_y == (myCoord.m_y + extra) && targetTile.m_x != myCoord.m_x)
+	{
+		if (side)
+		{
+			targetTile.m_y += 1;
+		}
+		else
+		{
+			targetTile.m_y -= 1;
+		}
+		const int tileID = board.GetTileIDFromCoord(targetTile);
+		if (Tile* pEnpassantTile = board.GetTile(tileID))
+		{
+			if (Piece* pEnpassantPiece = pEnpassantTile->GetPiece())
+			{
+				if (pEnpassantPiece->GetFlags() & (uint32_t)Piece::PieceFlag::Pawn)
+				{
+					// Destroy
+					pEnpassantTile->SetPiece(nullptr);
+					pEnpassantPiece->SetCaptured(true);
+				}
+			}
+		}
+	}
+}
+
+void Piece::CheckCastling(const Tile& pTile, Board& m_board)
+{
+	const bool isAKing = GetFlags() & (uint32_t)Piece::PieceFlag::King;
+	if (!isAKing)
+	{
+		return;
+	}
+
+	// Consider Castling
+	Coordinate temp = pTile.GetCoordinate();
+	Coordinate temp2 = GetCoordinate();
+	int xDiff = temp.m_x - temp2.m_x;
+	int unModifiedXDiff = xDiff;
+	int currentRrookX = 0;
+	int targetRookX = 0;
+	if (xDiff < 0)
+	{
+		currentRrookX = temp2.m_x - 4;
+		targetRookX = temp2.m_x - 1;
+		xDiff *= -1;
 	}
 	else
 	{
-		const int rowToCompare = isPawn ? 1 : 0;
-		return coord.m_y != rowToCompare;
+		currentRrookX = temp2.m_x + 3;
+		targetRookX = temp2.m_x + 1;
 	}
-	return false;
+	if (xDiff == 2)
+	{
+		// Castling in motion
+		// Determine which rook needs to move.
+		Coordinate rookCoord(currentRrookX, temp2.m_y);
+		int rookTileID = m_board.GetTileIDFromCoord(rookCoord);
+		if (Tile* pRookTile = m_board.GetTile(rookTileID))
+		{
+			if (Piece* pRook = pRookTile->GetPiece())
+			{
+				if (pRook->GetFlags() & (uint32_t)Piece::PieceFlag::Rook)
+				{
+					// Need to tell previous tile that we're gone
+					// And New tile that we have arrived			
+
+					pRookTile->SetPiece(nullptr);
+
+					// Need to calculate where the rook is ending up
+					Coordinate targetRookCoord(targetRookX, temp2.m_y);
+					pRook->SetCoord({ targetRookX, temp2.m_y });
+					pRook->UpdatePosFromCoord();
+					if (Tile* pDestinationTile = m_board.GetTile(m_board.GetTileIDFromCoord(targetRookCoord)))
+					{
+						pDestinationTile->SetPiece(pRook);
+					}
+				}
+			}
+		}
+	}
 }
+
+//const bool Piece::HasMoved() const
+//{
+//	const Coordinate& coord = GetCoordinate();
+//	const bool side = IsSouthPlaying();
+//	const bool isPawn = GetFlags() & (uint32_t)Piece::PieceFlag::Pawn;
+//	if (side)
+//	{
+//		// If we're playing on the bottom
+//		// We haven't moved if we're on the 6th or 7th row depending on piece
+//		const int rowToCompare = isPawn ? 6 : 7;
+//		return coord.m_y != rowToCompare;
+//	}
+//	else
+//	{
+//		const int rowToCompare = isPawn ? 1 : 0;
+//		return coord.m_y != rowToCompare;
+//	}
+//	return false;
+//}
 
 int Piece::GetValue() const
 {
@@ -391,4 +467,30 @@ int Piece::GetValue() const
 	}
 
 	return m_valueMap[Piece::PieceFlag::None];
+}
+
+void Piece::Promote(SDL_Renderer* pRenderer)
+{
+	if (!pRenderer)
+		return;
+
+	if (ChessUser* pOwner = m_pOwner)
+	{
+		const uint32_t colour = pOwner->IsWhite() ? (uint32_t)Piece::PieceFlag::White : (uint32_t)Piece::PieceFlag::Black;
+		int pathID = 0;
+		if (colour & (uint32_t)Piece::PieceFlag::Black)
+		{
+			pathID = 1;
+		}
+
+		m_pieceflags &= ~(uint32_t)Piece::PieceFlag::Pawn;
+		m_pieceflags |= (uint32_t)Piece::PieceFlag::Queen;
+		NMSprite& sprite = GetSprite();
+		sprite.AssignSprite(pRenderer, Board::m_pieceMap[Piece::PieceFlag::Queen].m_paths[pathID]);
+		const int pieceSize = 96;		
+		const int size = pieceSize;
+		SetSize(size, size);
+		UpdatePosFromCoord();
+
+	}
 }

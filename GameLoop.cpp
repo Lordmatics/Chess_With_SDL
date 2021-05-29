@@ -73,6 +73,23 @@ void GameLoop::ConstructSDL(int w, int h, bool fullscreen)
 	InitGame();
 }
 
+void GameLoop::ClearInput()
+{
+	m_board.ClearLegalMoves();
+
+	m_pSelectedRect = nullptr;
+
+	if (Piece* pSelected = m_pSelectedPiece)
+	{
+		pSelected->SetSelected(false);
+		m_pSelectedPiece = nullptr;
+	}
+	if (Tile* pPiecesTile = m_pPiecesTile)
+	{
+		m_pPiecesTile = nullptr;
+	}
+}
+
 void GameLoop::CleanUp()
 {
 	SDL_DestroyWindow(m_pGameWindow);
@@ -109,6 +126,12 @@ void GameLoop::HandleEvents()
 							{
 								if (Piece* pOccupant = pTile->GetPiece())
 								{
+									const bool isWhite = pOccupant->GetFlags() & (uint32_t)Piece::PieceFlag::White;
+									if (isWhite != m_bPlayerIsWhite)
+									{
+										ClearInput();
+										break;
+									}
 									m_resetPos = pOccupant->GetTransform();
 									m_pSelectedRect = &pOccupant->GetTransform();
 									m_pPiecesTile = pTile;
@@ -124,8 +147,6 @@ void GameLoop::HandleEvents()
 				if(m_playersTurn)
 					m_board.GenerateLegalMoves(m_pSelectedPiece);
 			}
-
-			volatile int i = 5;
 			break;
 		}
 		case SDL_MOUSEBUTTONUP:
@@ -133,8 +154,6 @@ void GameLoop::HandleEvents()
 			if (m_LMBD && event.button.button == SDL_BUTTON_LEFT)
 			{
 				m_LMBD = false;
-				
-
 				bool allowMove = false;
 				bool isACapture = false;
 				//Coordinate allowMoveLoc;
@@ -149,12 +168,14 @@ void GameLoop::HandleEvents()
 						{
 							if (SDL_Rect* pawnTransform = &pTile->GetTransform())
 							{
+								const bool isAPawn = m_pSelectedPiece ? m_pSelectedPiece->GetFlags() & (uint32_t)Piece::PieceFlag::Pawn : false;
 								auto Predicate = [&pTile](Tile* pOtherTile)
 								{
 									return pTile == pOtherTile;
 								};
 								if (m_board.TileMatch(Predicate, 1))
 								{
+									const bool isTileAPromotionSquare = pTile->IsPromotionSquare();
 									if (Piece* pDefender = pTile->GetPiece())
 									{
 										isACapture = true;
@@ -162,6 +183,14 @@ void GameLoop::HandleEvents()
 										m_board.Test();
 
 										pDefender->SetCaptured(true);
+
+										if (isAPawn && isTileAPromotionSquare && m_pSelectedPiece)
+										{
+											if (Piece* pSelectedPiece = m_pSelectedPiece)
+											{
+												pSelectedPiece->Promote(m_pRenderer);
+											}
+										}
 									}
 									else
 									{
@@ -171,37 +200,65 @@ void GameLoop::HandleEvents()
 										// Need to terminate that tiles piece
 										if (Piece* pSelectedPiece = m_pSelectedPiece)
 										{
-											if (pSelectedPiece->GetFlags() & (uint32_t)Piece::PieceFlag::Pawn)
+											pSelectedPiece->CheckEnpassant(*pTile, m_board);
+
+											if (isAPawn)
 											{
-												Coordinate temp = pTile->GetCoordinate();
-												Coordinate temp2 = pSelectedPiece->GetCoordinate();
-												bool side = pSelectedPiece->IsSouthPlaying();
-												int extra = side ? -1 : 1;
-												if (temp.m_y == (temp2.m_y + extra) && temp.m_x != temp2.m_x)
+												if (isTileAPromotionSquare)
 												{
-													if (side)
-													{
-														temp.m_y += 1;
-													}
-													else
-													{
-														temp.m_y -= 1;
-													}
-													int tileID = m_board.GetTileIDFromCoord(temp);
-													if (Tile* pEnpassantTile = m_board.GetTile(tileID))
-													{
-														if (Piece* pEnpassantPawn = pEnpassantTile->GetPiece())
-														{
-															if (pEnpassantPawn->GetFlags() & (uint32_t)Piece::PieceFlag::Pawn)
-															{
-																// Terminate
-																isACapture = true;
-																pEnpassantTile->SetPiece(nullptr);
-																pEnpassantPawn->SetCaptured(true);
-															}
-														}
-													}
+													pSelectedPiece->Promote(m_pRenderer);
 												}
+											}
+											else
+											{
+												pSelectedPiece->CheckCastling(*pTile, m_board);
+												//// Consider Castling
+												//Coordinate temp = pTile->GetCoordinate();
+												//Coordinate temp2 = pSelectedPiece->GetCoordinate();
+												//int xDiff = temp.m_x - temp2.m_x;
+												//int unModifiedXDiff = xDiff;
+												//int currentRrookX = 0;
+												//int targetRookX = 0;
+												//if (xDiff < 0)
+												//{
+												//	currentRrookX = temp2.m_x - 4;
+												//	targetRookX = temp2.m_x - 1;
+												//	xDiff *= -1;
+												//}
+												//else
+												//{
+												//	currentRrookX = temp2.m_x + 3;
+												//	targetRookX = temp2.m_x + 1;
+												//}
+												//if (xDiff == 2)
+												//{
+												//	// Castling in motion
+												//	// Determine which rook needs to move.
+												//	Coordinate rookCoord(currentRrookX, temp2.m_y);
+												//	int rookTileID = m_board.GetTileIDFromCoord(rookCoord);
+												//	if (Tile* pRookTile = m_board.GetTile(rookTileID))
+												//	{
+												//		if (Piece* pRook = pRookTile->GetPiece())
+												//		{
+												//			if (pRook->GetFlags() & (uint32_t)Piece::PieceFlag::Rook)
+												//			{
+												//				// Need to tell previous tile that we're gone
+												//				// And New tile that we have arrived			
+												//				
+												//				pRookTile->SetPiece(nullptr);
+												//				
+												//				// Need to calculate where the rook is ending up
+												//				Coordinate targetRookCoord(targetRookX, temp2.m_y);
+												//				pRook->SetCoord({targetRookX, temp2.m_y});
+												//				pRook->UpdatePosFromCoord();
+												//				if (Tile* pDestinationTile = m_board.GetTile(m_board.GetTileIDFromCoord(targetRookCoord)))
+												//				{
+												//					pDestinationTile->SetPiece(pRook);
+												//				}
+												//			}
+												//		}
+												//	}
+												//}
 											}
 										}
 									}
@@ -210,8 +267,6 @@ void GameLoop::HandleEvents()
 									// Need to apply piece offsets
 									newCoord = pTile->GetCoordinate();
 									pNewTile = pTile;
-									//allowMoveLoc.m_x = pawnTransform->x;
-									//allowMoveLoc.m_y = pawnTransform->y;
 									break;
 								}
 							}
@@ -241,15 +296,16 @@ void GameLoop::HandleEvents()
 
 						if (Piece* pSelected = m_pSelectedPiece)
 						{
+							m_board.SetPreviouslyMoved(pSelectedPiece);
 							pSelected->SetSelected(false);
-							pSelected = nullptr;
+							m_pSelectedPiece = nullptr;
 						}
 						if (Tile* pPiecesTile = m_pPiecesTile)
 						{
-							pPiecesTile = nullptr;
+							m_pPiecesTile = nullptr;
 						}
 
-						m_board.RunAI(m_playersTurn);
+						m_board.RunAI(m_pRenderer, m_playersTurn);
 						//pSelectedPiece->SetPos(0, 0);// allowMoveLoc.m_x, allowMoveLoc.m_y);
 					}
 					//if (m_pSelectedRect)
@@ -268,21 +324,7 @@ void GameLoop::HandleEvents()
 					}
 				}
 
-				
-				m_board.ClearLegalMoves();
-
-				m_pSelectedRect = nullptr;
-				
-				if (Piece* pSelected = m_pSelectedPiece)
-				{
-					pSelected->SetSelected(false);
-					pSelected = nullptr;
-				}
-				if (Tile* pPiecesTile = m_pPiecesTile)
-				{
-					pPiecesTile = nullptr;
-				}
-
+				ClearInput();
 			}
 			break;
 		}
@@ -346,7 +388,7 @@ void GameLoop::Process(float dt)
 
 void GameLoop::InitGame()
 {
-	m_board.Init(m_pRenderer);
+	m_bPlayerIsWhite = m_board.Init(m_pRenderer);
 }
 
 // https://opengameart.org/content/chess-pieces-and-board-squares
