@@ -21,6 +21,27 @@ Coordinate::Coordinate(const Coordinate& other) :
 
 }
 
+Coordinate& Coordinate::operator=(const Coordinate& other)
+{
+	m_x = other.m_x;
+	m_y = other.m_y;
+	return *this;
+}
+
+Coordinate& Coordinate::operator-(const Coordinate& other)
+{
+	m_x -= other.m_x;
+	m_y -= other.m_y;
+	return *this;
+}
+
+Coordinate& Coordinate::operator+(const Coordinate& other)
+{
+	m_x = m_x + other.m_x;
+	m_y = m_y + other.m_y;
+	return *this;
+}
+
 void Coordinate::operator-=(const Coordinate& other)
 {
 	m_x -= other.m_x;

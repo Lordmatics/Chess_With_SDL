@@ -32,6 +32,11 @@ bool Board::CheckPiece(Piece* pSelectedPiece, const Coordinate& coord)
 	//Coordinate coord;
 
 	bool isWhite = pSelectedPiece->GetFlags() & (uint32_t)Piece::PieceFlag::White;
+	if (coord.m_x < 0 || coord.m_x >= 8 ||
+		coord.m_y < 0 || coord.m_y >= 8)
+	{
+		return false;
+	}
 
 	const int leftTile = GetTileIDFromCoord(coord);
 	if (Tile* pTile = GetTile(leftTile))
@@ -78,27 +83,11 @@ Tile* Board::GetTileAtPoint(SDL_Point* point, int startIndex)
 		}
 	}
 
-	//for (int i = 0; i < m_iRows; i++)
-	//{
-	//	for (int j = 0; j < m_iColumns; j++)
-	//	{
-	//		Tile& object = m_backgroundTiles[i][j];
-	//		SDL_Rect& rect = object.GetTransform();
-	//		if (SDL_PointInRect(point, &rect))
-	//		{
-	//			return &object;
-	//		}
-	//	}
-	//}
 	return nullptr;
 }
 
 Piece* Board::GetPieceAtPoint(SDL_Point* point, int startIndex)
 {
-	//if (Tile* pTile = GetTileAtPoint(point, startIndex))
-	//{
-	//	return pTile->GetPiece();
-	//}
 	const int total = m_iRows * m_iColumns;
 	for (int i = startIndex; i < total; i++)
 	{	
@@ -519,13 +508,55 @@ void Board::GenerateLegalPawnMoves(int x, int y, bool isSouth, Piece* pSelectedP
 void Board::GenerateLegalKingMoves(int x, int y, bool isSouth, Piece* pSelectedPiece)
 {
 	Coordinate pieceCoord = pSelectedPiece->GetCoordinate();
+	Coordinate kingPositions[8] =
+	{
+		{ -1, -1},
+		{ -1,  1},
+		{ 1,  1},
+		{ 1, -1},
+		{ 0,  -1},
+		{ 0,   1},
+		{ 1,   0},
+		{ -1,  0}
+	};
 
+	Coordinate temp = pieceCoord;
+	for (int i = 0; i < 8; i++)
+	{
+		temp = pieceCoord;
+		Coordinate val = temp + kingPositions[i];
+		if (CheckPiece(pSelectedPiece, val))
+		{
+
+		}
+	}
 }
 
 void Board::GenerateLegalHorseMoves(int x, int y, bool isSouth, Piece* pSelectedPiece)
 {
 	Coordinate pieceCoord = pSelectedPiece->GetCoordinate();
+	Coordinate horsePositions[8] =
+	{
+		{ -2, -1},
+		{ -2,  1},
+		{ -1,  2},
+		{ -1, -2},
+		{ 2,  -1},
+		{ 2,   1},
+		{ 1,   2},
+		{ 1,  -2}
+	};
 
+	Coordinate temp = pieceCoord;
+	for (int i = 0; i < 8 ; i++)
+	{
+		temp = pieceCoord;
+		Coordinate val = temp + horsePositions[i];				
+		if (CheckPiece(pSelectedPiece, val))
+		{
+
+		}
+	}
 }
 
 void Board::GenerateLegalBishopMoves(int x, int y, bool isSouth, Piece* pSelectedPiece)
@@ -773,7 +804,8 @@ void Board::GenerateLegalRookMoves(int x, int y, bool isSouth, Piece* pSelectedP
 void Board::GenerateLegalQueenMoves(int x, int y, bool isSouth, Piece* pSelectedPiece)
 {
 	Coordinate pieceCoord = pSelectedPiece->GetCoordinate();
-
+	GenerateLegalBishopMoves(x, y, isSouth, pSelectedPiece);
+	GenerateLegalRookMoves(x, y, isSouth, pSelectedPiece);
 }
 
 void Board::Test()
