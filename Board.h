@@ -68,6 +68,7 @@ public:
 	void GenerateLegalQueenMoves(int x, int y, bool isSouth, Piece* pSelectedPiece);
 
 
+	const std::vector<Tile*>& GetValidTiles() const;
 	void Test();
 
 	Tile* GetTile(int id);
@@ -79,6 +80,8 @@ private:
 	Player m_player;
 	BasicAI m_opponent;
 	ChessUser* m_players[MAX_NUM_PLAYERS]; 
+public:
+	void RunAI(bool& m_playersTurn);
 };
 
 template<class Function>

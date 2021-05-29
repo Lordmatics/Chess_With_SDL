@@ -13,12 +13,20 @@ GameLoop::GameLoop() :
 	m_bIsRunning(1),
 	m_bPadding(0),
 	m_iFrameCount(0),
-	m_board()
+	m_board(),
+	m_playersTurn(true)
 {
 	ConstructSDL();
 }
 
-GameLoop::GameLoop(int width, int height)
+GameLoop::GameLoop(int width, int height) :
+	m_pGameWindow(nullptr),
+	m_pRenderer(nullptr),
+	m_bIsRunning(1),
+	m_bPadding(0),
+	m_iFrameCount(0),
+	m_board(),
+	m_playersTurn(true)
 {
 	ConstructSDL(width, height);
 }
@@ -83,26 +91,6 @@ void GameLoop::HandleEvents()
 	SDL_PollEvent(&event);
 	switch (event.type)
 	{
-		/* Drag and drop events */
-		//SDL_DROPFILE = 0x1000, /**< The system requests a file open */
-		//SDL_DROPTEXT,                 /**< text/plain drag-and-drop event */
-		//SDL_DROPBEGIN,                /**< A new set of drops is beginning (NULL filename) */
-		//SDL_DROPCOMPLETE,             /**< Current set of drops is now complete (NULL filename) */
-		//	/* Keyboard events */
-		//SDL_KEYDOWN = 0x300, /**< Key pressed */
-		//SDL_KEYUP,                  /**< Key released */
-		//SDL_TEXTEDITING,            /**< Keyboard text editing (composition) */
-		//SDL_TEXTINPUT,              /**< Keyboard text input */
-		//SDL_KEYMAPCHANGED,          /**< Keymap changed due to a system event such as an
-		//								 input language or keyboard layout change.
-		//							*/
-		//
-		//							/* Mouse events */
-		//SDL_MOUSEMOTION = 0x400, /**< Mouse moved */
-		//SDL_MOUSEBUTTONDOWN,        /**< Mouse button pressed */
-		//SDL_MOUSEBUTTONUP,          /**< Mouse button released */
-		//SDL_MOUSEWHEEL,             /**< Mouse wheel motion */
-
 		//https://www.youtube.com/watch?v=jzasDqPmtPI&list=PLhfAbcv9cehhkG7ZQK0nfIGJC_C-wSLrx&index=5
 		//https://gigi.nullneuron.net/gigilabs/sdl2-drag-and-drop/
 		case SDL_MOUSEBUTTONDOWN:
@@ -133,7 +121,8 @@ void GameLoop::HandleEvents()
 						}
 					}
 				}
-				m_board.GenerateLegalMoves(m_pSelectedPiece);
+				if(m_playersTurn)
+					m_board.GenerateLegalMoves(m_pSelectedPiece);
 			}
 
 			volatile int i = 5;
@@ -152,76 +141,79 @@ void GameLoop::HandleEvents()
 				Coordinate newCoord;
 				Tile* pNewTile = nullptr;
 				// If release position is in the valid tiles list - drop it off there
-				for (int i = 0; i < Board::m_iColumns; i++)
+				if (m_playersTurn)
 				{
-					if (Tile* pTile = m_board.GetTileAtPoint(&m_mousePosition))
+					for (int i = 0; i < Board::m_iColumns; i++)
 					{
-						if (SDL_Rect* pawnTransform = &pTile->GetTransform())
+						if (Tile* pTile = m_board.GetTileAtPoint(&m_mousePosition))
 						{
-							auto Predicate = [&pTile](Tile* pOtherTile)
+							if (SDL_Rect* pawnTransform = &pTile->GetTransform())
 							{
-								return pTile == pOtherTile;
-							};
-							if (m_board.TileMatch(Predicate, 1))
-							{
-								if (Piece* pDefender = pTile->GetPiece())
+								auto Predicate = [&pTile](Tile* pOtherTile)
 								{
-									isACapture = true;
-
-									m_board.Test();
-
-									pDefender->SetCaptured(true);
-								}
-								else
-								{								
-									// Need to consider EnPassant
-									// If the piece could move to this square was a pawn
-									// And the Tile BELOW it HAS a Pawn as well.
-									// Need to terminate that tiles piece
-									if (Piece* pSelectedPiece = m_pSelectedPiece)
+									return pTile == pOtherTile;
+								};
+								if (m_board.TileMatch(Predicate, 1))
+								{
+									if (Piece* pDefender = pTile->GetPiece())
 									{
-										if (pSelectedPiece->GetFlags() & (uint32_t)Piece::PieceFlag::Pawn)
+										isACapture = true;
+
+										m_board.Test();
+
+										pDefender->SetCaptured(true);
+									}
+									else
+									{
+										// Need to consider EnPassant
+										// If the piece could move to this square was a pawn
+										// And the Tile BELOW it HAS a Pawn as well.
+										// Need to terminate that tiles piece
+										if (Piece* pSelectedPiece = m_pSelectedPiece)
 										{
-											Coordinate temp = pTile->GetCoordinate();
-											Coordinate temp2 = pSelectedPiece->GetCoordinate();
-											bool side = pSelectedPiece->IsSouthPlaying();
-											int extra = side ? -1 : 1;
-											if (temp.m_y == (temp2.m_y + extra) && temp.m_x != temp2.m_x)
+											if (pSelectedPiece->GetFlags() & (uint32_t)Piece::PieceFlag::Pawn)
 											{
-												if (side)
+												Coordinate temp = pTile->GetCoordinate();
+												Coordinate temp2 = pSelectedPiece->GetCoordinate();
+												bool side = pSelectedPiece->IsSouthPlaying();
+												int extra = side ? -1 : 1;
+												if (temp.m_y == (temp2.m_y + extra) && temp.m_x != temp2.m_x)
 												{
-													temp.m_y += 1;
-												}
-												else
-												{
-													temp.m_y -= 1;
-												}
-												int tileID = m_board.GetTileIDFromCoord(temp);
-												if (Tile* pEnpassantTile = m_board.GetTile(tileID))
-												{
-													if (Piece* pEnpassantPawn = pEnpassantTile->GetPiece())
+													if (side)
 													{
-														if (pEnpassantPawn->GetFlags() & (uint32_t)Piece::PieceFlag::Pawn)
+														temp.m_y += 1;
+													}
+													else
+													{
+														temp.m_y -= 1;
+													}
+													int tileID = m_board.GetTileIDFromCoord(temp);
+													if (Tile* pEnpassantTile = m_board.GetTile(tileID))
+													{
+														if (Piece* pEnpassantPawn = pEnpassantTile->GetPiece())
 														{
-															// Terminate
-															isACapture = true;
-															pEnpassantTile->SetPiece(nullptr);
-															pEnpassantPawn->SetCaptured(true);
+															if (pEnpassantPawn->GetFlags() & (uint32_t)Piece::PieceFlag::Pawn)
+															{
+																// Terminate
+																isACapture = true;
+																pEnpassantTile->SetPiece(nullptr);
+																pEnpassantPawn->SetCaptured(true);
+															}
 														}
 													}
 												}
 											}
-										}										
+										}
 									}
-								}
 
-								allowMove = true;
-								// Need to apply piece offsets
-								newCoord = pTile->GetCoordinate();
-								pNewTile = pTile;
-								//allowMoveLoc.m_x = pawnTransform->x;
-								//allowMoveLoc.m_y = pawnTransform->y;
-								break;
+									allowMove = true;
+									// Need to apply piece offsets
+									newCoord = pTile->GetCoordinate();
+									pNewTile = pTile;
+									//allowMoveLoc.m_x = pawnTransform->x;
+									//allowMoveLoc.m_y = pawnTransform->y;
+									break;
+								}
 							}
 						}
 					}
@@ -243,6 +235,21 @@ void GameLoop::HandleEvents()
 						{
 							pDestinationTile->SetPiece(pSelectedPiece);
 						}
+						m_playersTurn = false;
+
+						m_pSelectedRect = nullptr;
+
+						if (Piece* pSelected = m_pSelectedPiece)
+						{
+							pSelected->SetSelected(false);
+							pSelected = nullptr;
+						}
+						if (Tile* pPiecesTile = m_pPiecesTile)
+						{
+							pPiecesTile = nullptr;
+						}
+
+						m_board.RunAI(m_playersTurn);
 						//pSelectedPiece->SetPos(0, 0);// allowMoveLoc.m_x, allowMoveLoc.m_y);
 					}
 					//if (m_pSelectedRect)
@@ -348,10 +355,21 @@ void GameLoop::Render()
 	SDL_RenderClear(m_pRenderer);
 
 	m_board.Render(m_pRenderer);
-
+	
 	if (Piece* pSelected = m_pSelectedPiece)
 	{
-		pSelected->RenderAsSelected(m_pRenderer);
+		if (!pSelected->RenderAsSelected(m_pRenderer))
+		{
+			m_pSelectedRect = nullptr;
+			
+			pSelected->SetSelected(false);
+			pSelected = nullptr;
+		
+			if (Tile* pPiecesTile = m_pPiecesTile)
+			{
+				pPiecesTile = nullptr;
+			}
+		}
 	}
 
 	// Show Legal Moves

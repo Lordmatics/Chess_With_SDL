@@ -212,3 +212,21 @@ void Tile::RenderPiece(SDL_Renderer* pRenderer)
 		pPiece->Render(pRenderer);
 	}
 }
+
+float Tile::Score(Piece& piece)
+{
+	const bool isWhite = piece.GetFlags() & (uint32_t)Piece::PieceFlag::White;
+	const bool isSouthPlaying = piece.IsSouthPlaying();
+	const Coordinate& coord = piece.GetCoordinate();
+
+	if (Piece* pOccupant = GetPiece())
+	{
+		// Would be a capture
+
+		return 5.0f * pOccupant->GetValue();
+	}
+	else
+	{
+		return 1.0f;
+	}
+}

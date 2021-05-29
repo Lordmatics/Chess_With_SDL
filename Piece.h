@@ -37,7 +37,7 @@ public:
 	static std::map<Piece::PieceFlag, int> m_valueMap;
 
 	void Render(SDL_Renderer* pRenderer) override;
-	void RenderAsSelected(SDL_Renderer* pRenderer, bool internal = false);
+	bool RenderAsSelected(SDL_Renderer* pRenderer, bool internal = false);
 
 	void Init(SDL_Renderer* pRenderer, int i, int j, ChessUser* owner);
 	void SetSelected(bool val);
@@ -55,5 +55,7 @@ private:
 	uint32_t m_pieceflags;	
 	bool m_bSelected;
 	bool m_bCaptured;
+public:
+	int GetValue() const;
 };
 

@@ -160,8 +160,12 @@ void Piece::Render(SDL_Renderer* pRenderer)
 	RenderAsSelected(pRenderer, true);
 }
 
-void Piece::RenderAsSelected(SDL_Renderer* pRenderer, bool internal)
+bool Piece::RenderAsSelected(SDL_Renderer* pRenderer, bool internal)
 {
+	if (IsCaptured())
+	{
+		return false;
+	}
 	SDL_Rect& transform = GetTransform();
 	NMSprite& sprite = GetSprite();
 	if (SDL_Texture* pTexture = sprite.GetTexture())
@@ -173,6 +177,7 @@ void Piece::RenderAsSelected(SDL_Renderer* pRenderer, bool internal)
 	{
 
 	}
+	return true;
 }
 
 void Piece::Init(SDL_Renderer* pRenderer, int i, int j, ChessUser* pOwner)
@@ -352,4 +357,38 @@ const bool Piece::HasMoved() const
 		return coord.m_y != rowToCompare;
 	}
 	return false;
+}
+
+int Piece::GetValue() const
+{
+	if (m_pieceflags & (uint32_t)PieceFlag::None)
+	{
+		return m_valueMap[Piece::PieceFlag::None];
+	}
+	else if (m_pieceflags & (uint32_t)PieceFlag::Pawn)
+	{
+		return m_valueMap[Piece::PieceFlag::Pawn];
+	}
+	else if (m_pieceflags & (uint32_t)PieceFlag::King)
+	{
+		return m_valueMap[Piece::PieceFlag::King];
+	}
+	else if (m_pieceflags & (uint32_t)PieceFlag::Horse)
+	{
+		return m_valueMap[Piece::PieceFlag::Horse];
+	}
+	else if (m_pieceflags & (uint32_t)PieceFlag::Bishop)
+	{
+		return m_valueMap[Piece::PieceFlag::Bishop];
+	}
+	else if (m_pieceflags & (uint32_t)PieceFlag::Rook)
+	{
+		return m_valueMap[Piece::PieceFlag::Rook];
+	}
+	else if (m_pieceflags & (uint32_t)PieceFlag::Queen)
+	{
+		return m_valueMap[Piece::PieceFlag::Queen];
+	}
+
+	return m_valueMap[Piece::PieceFlag::None];
 }

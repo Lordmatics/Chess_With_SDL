@@ -45,5 +45,7 @@ private:
 	Piece* m_occupiedPiece;
 	int m_iBoardIndex;
 	bool m_bHasMoved;
+public:
+	float Score(Piece& piece);
 };
 

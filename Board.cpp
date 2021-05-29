@@ -244,6 +244,7 @@ void Board::Init(SDL_Renderer* pRenderer)
 	m_players[0] = &m_player;
 	m_players[1] = &m_opponent;
 
+	random = 1;
 	if (random == 1)
 	{	
 		m_players[0]->SetWhite(true);
@@ -523,7 +524,6 @@ void Board::GenerateLegalKingMoves(int x, int y, bool isSouth, Piece* pSelectedP
 	Coordinate temp = pieceCoord;
 	for (int i = 0; i < 8; i++)
 	{
-		temp = pieceCoord;
 		Coordinate val = temp + kingPositions[i];
 		if (CheckPiece(pSelectedPiece, val))
 		{
@@ -803,9 +803,13 @@ void Board::GenerateLegalRookMoves(int x, int y, bool isSouth, Piece* pSelectedP
 
 void Board::GenerateLegalQueenMoves(int x, int y, bool isSouth, Piece* pSelectedPiece)
 {
-	Coordinate pieceCoord = pSelectedPiece->GetCoordinate();
 	GenerateLegalBishopMoves(x, y, isSouth, pSelectedPiece);
 	GenerateLegalRookMoves(x, y, isSouth, pSelectedPiece);
+}
+
+const std::vector<Tile*>& Board::GetValidTiles() const
+{
+	return m_validTiles;
 }
 
 void Board::Test()
@@ -829,4 +833,10 @@ Tile* Board::GetTile(int id)
 	{
 		return nullptr;
 	}
+}
+
+void Board::RunAI(bool& m_playersTurn)
+{
+	m_opponent.MakeMove();
+	m_playersTurn = true;
 }

@@ -40,6 +40,7 @@ private:
 	Board m_board;
 
 	bool m_LMBD;
+	bool m_playersTurn;
 	SDL_Point m_mousePosition;
 	SDL_Rect* m_pSelectedRect;
 	SDL_Point m_clickOffset;

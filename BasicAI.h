@@ -7,5 +7,7 @@ public:
 
 	BasicAI();
 	virtual ~BasicAI();
+
+	void MakeMove();
 };
 
