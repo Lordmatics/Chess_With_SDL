@@ -13,8 +13,7 @@ GameLoop::GameLoop() :
 	m_bIsRunning(1),
 	m_bPadding(0),
 	m_iFrameCount(0),
-	m_board(),
-	m_playersTurn(true)
+	m_board()
 {
 	ConstructSDL();
 }
@@ -25,8 +24,7 @@ GameLoop::GameLoop(int width, int height) :
 	m_bIsRunning(1),
 	m_bPadding(0),
 	m_iFrameCount(0),
-	m_board(),
-	m_playersTurn(true)
+	m_board()
 {
 	ConstructSDL(width, height);
 }
@@ -73,21 +71,9 @@ void GameLoop::ConstructSDL(int w, int h, bool fullscreen)
 	InitGame();
 }
 
-void GameLoop::ClearInput()
+void GameLoop::InitGame()
 {
-	m_board.ClearLegalMoves();
-
-	m_pSelectedRect = nullptr;
-
-	if (Piece* pSelected = m_pSelectedPiece)
-	{
-		pSelected->SetSelected(false);
-		m_pSelectedPiece = nullptr;
-	}
-	if (Tile* pPiecesTile = m_pPiecesTile)
-	{
-		m_pPiecesTile = nullptr;
-	}
+	m_board.Init(m_pRenderer);
 }
 
 void GameLoop::CleanUp()
@@ -112,257 +98,17 @@ void GameLoop::HandleEvents()
 		//https://gigi.nullneuron.net/gigilabs/sdl2-drag-and-drop/
 		case SDL_MOUSEBUTTONDOWN:
 		{
-
-			if (!m_LMBD && event.button.button == SDL_BUTTON_LEFT)
-			{
-				m_LMBD = true;
-				for (int i = 0; i < Board::m_iColumns ; i++)
-				{
-					if (Tile* pTile = m_board.GetTileAtPoint(&m_mousePosition))
-					{
-						if (SDL_Rect* pawnTransform = &pTile->GetTransform())
-						{
-							if (SDL_PointInRect(&m_mousePosition, pawnTransform))
-							{
-								if (Piece* pOccupant = pTile->GetPiece())
-								{
-									const bool isWhite = pOccupant->GetFlags() & (uint32_t)Piece::PieceFlag::White;
-									if (isWhite != m_bPlayerIsWhite)
-									{
-										ClearInput();
-										break;
-									}
-									m_resetPos = pOccupant->GetTransform();
-									m_pSelectedRect = &pOccupant->GetTransform();
-									m_pPiecesTile = pTile;
-									m_pSelectedPiece = pOccupant;
-									m_pSelectedPiece->SetSelected(true);
-								}
-	
-								break;
-							}
-						}
-					}
-				}
-				if(m_playersTurn)
-					m_board.GenerateLegalMoves(m_pSelectedPiece);
-			}
+			OnMouseDown(event);			
 			break;
 		}
 		case SDL_MOUSEBUTTONUP:
 		{
-			if (m_LMBD && event.button.button == SDL_BUTTON_LEFT)
-			{
-				m_LMBD = false;
-				bool allowMove = false;
-				bool isACapture = false;
-				//Coordinate allowMoveLoc;
-				Coordinate newCoord;
-				Tile* pNewTile = nullptr;
-				// If release position is in the valid tiles list - drop it off there
-				if (m_playersTurn)
-				{
-					for (int i = 0; i < Board::m_iColumns; i++)
-					{
-						if (Tile* pTile = m_board.GetTileAtPoint(&m_mousePosition))
-						{
-							if (SDL_Rect* pawnTransform = &pTile->GetTransform())
-							{
-								const bool isAPawn = m_pSelectedPiece ? m_pSelectedPiece->GetFlags() & (uint32_t)Piece::PieceFlag::Pawn : false;
-								auto Predicate = [&pTile](Tile* pOtherTile)
-								{
-									return pTile == pOtherTile;
-								};
-								if (m_board.TileMatch(Predicate, 1))
-								{
-									const bool isTileAPromotionSquare = pTile->IsPromotionSquare();
-									if (Piece* pDefender = pTile->GetPiece())
-									{
-										isACapture = true;
-
-										m_board.Test();
-
-										pDefender->SetCaptured(true);
-
-										if (isAPawn && isTileAPromotionSquare && m_pSelectedPiece)
-										{
-											if (Piece* pSelectedPiece = m_pSelectedPiece)
-											{
-												pSelectedPiece->Promote(m_pRenderer);
-											}
-										}
-									}
-									else
-									{
-										// Need to consider EnPassant
-										// If the piece could move to this square was a pawn
-										// And the Tile BELOW it HAS a Pawn as well.
-										// Need to terminate that tiles piece
-										if (Piece* pSelectedPiece = m_pSelectedPiece)
-										{
-											pSelectedPiece->CheckEnpassant(*pTile, m_board);
-
-											if (isAPawn)
-											{
-												if (isTileAPromotionSquare)
-												{
-													pSelectedPiece->Promote(m_pRenderer);
-												}
-											}
-											else
-											{
-												pSelectedPiece->CheckCastling(*pTile, m_board);
-												//// Consider Castling
-												//Coordinate temp = pTile->GetCoordinate();
-												//Coordinate temp2 = pSelectedPiece->GetCoordinate();
-												//int xDiff = temp.m_x - temp2.m_x;
-												//int unModifiedXDiff = xDiff;
-												//int currentRrookX = 0;
-												//int targetRookX = 0;
-												//if (xDiff < 0)
-												//{
-												//	currentRrookX = temp2.m_x - 4;
-												//	targetRookX = temp2.m_x - 1;
-												//	xDiff *= -1;
-												//}
-												//else
-												//{
-												//	currentRrookX = temp2.m_x + 3;
-												//	targetRookX = temp2.m_x + 1;
-												//}
-												//if (xDiff == 2)
-												//{
-												//	// Castling in motion
-												//	// Determine which rook needs to move.
-												//	Coordinate rookCoord(currentRrookX, temp2.m_y);
-												//	int rookTileID = m_board.GetTileIDFromCoord(rookCoord);
-												//	if (Tile* pRookTile = m_board.GetTile(rookTileID))
-												//	{
-												//		if (Piece* pRook = pRookTile->GetPiece())
-												//		{
-												//			if (pRook->GetFlags() & (uint32_t)Piece::PieceFlag::Rook)
-												//			{
-												//				// Need to tell previous tile that we're gone
-												//				// And New tile that we have arrived			
-												//				
-												//				pRookTile->SetPiece(nullptr);
-												//				
-												//				// Need to calculate where the rook is ending up
-												//				Coordinate targetRookCoord(targetRookX, temp2.m_y);
-												//				pRook->SetCoord({targetRookX, temp2.m_y});
-												//				pRook->UpdatePosFromCoord();
-												//				if (Tile* pDestinationTile = m_board.GetTile(m_board.GetTileIDFromCoord(targetRookCoord)))
-												//				{
-												//					pDestinationTile->SetPiece(pRook);
-												//				}
-												//			}
-												//		}
-												//	}
-												//}
-											}
-										}
-									}
-
-									allowMove = true;
-									// Need to apply piece offsets
-									newCoord = pTile->GetCoordinate();
-									pNewTile = pTile;
-									break;
-								}
-							}
-						}
-					}
-				}
-
-				if (allowMove)
-				{
-					if (Piece* pSelectedPiece = m_pSelectedPiece)
-					{
-						// Need to tell previous tile that we're gone
-						// And New tile that we have arrived
-						if (Tile* pPrevTile = m_pPiecesTile)
-						{
-							pPrevTile->SetPiece(nullptr);
-						}
-						pSelectedPiece->SetCoord(newCoord);
-						pSelectedPiece->UpdatePosFromCoord();
-						if (Tile* pDestinationTile = pNewTile)
-						{
-							pDestinationTile->SetPiece(pSelectedPiece);
-						}
-						m_playersTurn = false;
-
-						m_pSelectedRect = nullptr;
-
-						if (Piece* pSelected = m_pSelectedPiece)
-						{
-							m_board.SetPreviouslyMoved(pSelectedPiece);
-							pSelected->SetSelected(false);
-							m_pSelectedPiece = nullptr;
-						}
-						if (Tile* pPiecesTile = m_pPiecesTile)
-						{
-							m_pPiecesTile = nullptr;
-						}
-
-						m_board.RunAI(m_pRenderer, m_playersTurn);
-						//pSelectedPiece->SetPos(0, 0);// allowMoveLoc.m_x, allowMoveLoc.m_y);
-					}
-					//if (m_pSelectedRect)
-					//{
-					//	m_pSelectedRect->x = allowMoveLoc.m_x;
-					//	m_pSelectedRect->y = allowMoveLoc.m_y;
-					//
-					//}
-				}
-				else
-				{
-					if (m_pSelectedRect)
-					{
-						m_pSelectedRect->x = m_resetPos.x;
-						m_pSelectedRect->y = m_resetPos.y;
-					}
-				}
-
-				ClearInput();
-			}
+			OnMouseUp(event);
 			break;
 		}
 		case SDL_MOUSEMOTION:
 		{
-			m_mousePosition = { event.motion.x, event.motion.y };
-
-			// TODO: Be nice to change this to an actual texture highlight - white boarder or so.
-			if (Tile* pTile = m_board.GetTileAtPoint(&m_mousePosition))
-			{
-				auto Predicate = [&pTile](Tile* pOtherTile)
-				{
-					return pTile == pOtherTile;
-				};
-				if (m_board.TileMatch(Predicate, 0))
-				{
-					return;
-				}
-				NMSprite& sprite = pTile->GetSprite();
-				if (SDL_Texture* pTexture = sprite.GetTexture())
-				{
-					if (m_pHighlightedTex && m_pHighlightedTex != pTexture)
-					{
-						SDL_SetTextureColorMod(m_pHighlightedTex, 255, 255, 255);					
-					}
-					m_pHighlightedTex = pTexture;				
-				}
-			}
-			else
-			{
-
-			}
-
-			if (m_pHighlightedTex)
-			{
-				SDL_SetTextureColorMod(m_pHighlightedTex, 178, 178, 178);
-			}
-
+			OnMouse(event);
 			break;
 		}
 		case SDL_QUIT:
@@ -379,16 +125,60 @@ void GameLoop::Process(float dt)
 {
 	m_iFrameCount++;
 
-	if (SDL_Rect* pRect = m_pSelectedRect)
+	m_board.Process(dt);
+
+}
+
+void GameLoop::OnMouseDown(const SDL_Event& event)
+{
+	if (!m_LMBD && event.button.button == SDL_BUTTON_LEFT)
 	{
-		pRect->x = m_mousePosition.x - (pRect->w / 2);
-		pRect->y = m_mousePosition.y - (pRect->h / 2);
+		m_LMBD = true;
+
+		m_board.OnLeftClickDown(m_pRenderer);
 	}
 }
 
-void GameLoop::InitGame()
+void GameLoop::OnMouseUp(const SDL_Event& event)
 {
-	m_bPlayerIsWhite = m_board.Init(m_pRenderer);
+	if (m_LMBD && event.button.button == SDL_BUTTON_LEFT)
+	{
+		m_LMBD = false;
+		m_board.OnLeftClickRelease(m_pRenderer);		
+	}
+}
+
+void GameLoop::OnMouse(const SDL_Event& event)
+{
+	m_board.SetMousePosition({ event.motion.x, event.motion.y });
+
+	// TODO: Be nice to change this to an actual texture highlight - white boarder or so.
+	if (Tile* pTile = m_board.GetTileAtPoint(&m_mousePosition))
+	{
+		auto Predicate = [&pTile](Tile* pOtherTile)
+		{
+			return pTile == pOtherTile;
+		};
+		if (m_board.TileMatch(Predicate, 0))
+		{
+			return;
+		}
+		NMSprite& sprite = pTile->GetSprite();
+		if (SDL_Texture* pTexture = sprite.GetTexture())
+		{
+			if (m_pHighlightedTex && m_pHighlightedTex != pTexture)
+			{
+				SDL_SetTextureColorMod(m_pHighlightedTex, 255, 255, 255);
+			}
+			m_pHighlightedTex = pTexture;
+		}
+	}
+
+	if (m_pHighlightedTex)
+	{
+		SDL_SetTextureColorMod(m_pHighlightedTex, 178, 178, 178);
+	}
+
 }
 
 // https://opengameart.org/content/chess-pieces-and-board-squares
@@ -397,33 +187,6 @@ void GameLoop::Render()
 	SDL_RenderClear(m_pRenderer);
 
 	m_board.Render(m_pRenderer);
-	
-	if (Piece* pSelected = m_pSelectedPiece)
-	{
-		if (!pSelected->RenderAsSelected(m_pRenderer))
-		{
-			m_pSelectedRect = nullptr;
-			
-			pSelected->SetSelected(false);
-			pSelected = nullptr;
-		
-			if (Tile* pPiecesTile = m_pPiecesTile)
-			{
-				pPiecesTile = nullptr;
-			}
-		}
-	}
-
-	// Show Legal Moves
-	//m_board.RenderLegalMoves(m_pRenderer);
-
-	//for (int i = 0; i < MAX_NUM_PLAYERS; i++)
-	//{
-	//	if (m_players[i])
-	//	{
-	//		m_players[i]->Render(m_pRenderer);
-	//	}
-	//}
 
 	SDL_RenderPresent(m_pRenderer);
 }

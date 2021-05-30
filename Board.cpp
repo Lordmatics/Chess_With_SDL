@@ -26,12 +26,11 @@ void Board::AddPiece(int boardID, Piece* object)
 	object->Debug();
 }
 
-bool Board::CheckPiece(Piece* pSelectedPiece, const Coordinate& coord)
+bool Board::CheckPiece(const Piece& selectedPiece, const Coordinate& coord)
 {
-	Coordinate pieceCoord = pSelectedPiece->GetCoordinate();
-	//Coordinate coord;
+	Coordinate pieceCoord = selectedPiece.GetCoordinate();
 
-	bool isWhite = pSelectedPiece->GetFlags() & (uint32_t)Piece::PieceFlag::White;
+	bool isWhite = selectedPiece.GetFlags() & (uint32_t)Piece::PieceFlag::White;
 	if (coord.m_x < 0 || coord.m_x >= 8 ||
 		coord.m_y < 0 || coord.m_y >= 8)
 	{
@@ -119,50 +118,124 @@ void Board::GenerateLegalMoves(Piece* pSelectedObject)
 	int x = 0;
 	int y = 0;
 	int indexFound = 0;
-	// Find Tile in Board
-	//bool matchFoundOnBoard = false;
-	
 	const int tileId = pSelectedObject->GetTileIDFromCoord();
 
 	uint32_t flags = pSelectedObject->GetFlags();
-	//const bool isWhite = pSelectedObject->IsColour((uint32_t)Piece::PieceFlag::White);
 	const bool isWhite = pSelectedObject->GetFlags() & (uint32_t)Piece::PieceFlag::White ? true : false;
 	const bool isSouth = pSelectedObject->IsSouthPlaying();
-//	x = 8 - pSelectedObject->GetTransform().x;
-//	y = pSelectedObject->GetTransform().y;
 	
 	Coordinate coord = pSelectedObject->GetCoordinate();
 	x = coord.m_x;
 	y = coord.m_y;
 	if (flags & (uint32_t)Piece::PieceFlag::Pawn)
 	{
-		GenerateLegalPawnMoves(x, y, isSouth, pSelectedObject);		
+		GenerateLegalPawnMoves(*pSelectedObject);		
 	}
 	else if (flags & (uint32_t)Piece::PieceFlag::King)
 	{
-		GenerateLegalKingMoves(x, y, isSouth, pSelectedObject);
+		GenerateLegalKingMoves(*pSelectedObject);
 	}
 	else if (flags & (uint32_t)Piece::PieceFlag::Horse)
 	{
-		GenerateLegalHorseMoves(x, y, isSouth, pSelectedObject);
+		GenerateLegalHorseMoves(*pSelectedObject);
 	}
 	else if (flags & (uint32_t)Piece::PieceFlag::Bishop)
 	{
-		GenerateLegalBishopMoves(x, y, isSouth, pSelectedObject);
+		GenerateLegalBishopMoves(*pSelectedObject);
 	}
 	else if (flags & (uint32_t)Piece::PieceFlag::Rook)
 	{
-		GenerateLegalRookMoves(x, y, isSouth, pSelectedObject);
+		GenerateLegalRookMoves(*pSelectedObject);
 	}
 	else if (flags & (uint32_t)Piece::PieceFlag::Queen)
 	{
-		GenerateLegalQueenMoves(x, y, isSouth, pSelectedObject);
+		GenerateLegalQueenMoves(*pSelectedObject);
+	}
 
-		if (indexFound >= 8)
+
+	const bool playerIsWhite = m_player.IsWhite();
+	const bool aiIsWhite = m_opponent.IsWhite();
+	// Filter Valid Moves to Legal Moves
+	// Essentially any move that doesn't result in us being put in check
+	// So simulate each valid move, then evaluate the position
+	// If the position results in the king being capturable
+	// Exclude that move
+
+	// Needs to include the attacker
+	const std::vector<Tile*>& checkedTiles = GetCheckedTilesConst();
+	if (checkedTiles.size() <= 0)
+	{
+		return;
+	}
+
+	int eraseIndex = 0;
+	std::vector<Tile*> finalTiles;
+	// Logic needs flipping for king
+	bool isKing = flags & (uint32_t)Piece::PieceFlag::King;
+
+	if (isKing)
+	{
+		for (Tile* pPseudoTile : m_validTiles)
 		{
-			//m_queryingTiles.push_back(&m_board[indexFound - 8]);
+			bool dontAdd = false;
+			for (Tile* pCheckedTile : checkedTiles)
+			{
+				if (pPseudoTile == pCheckedTile)
+				{
+					// Don't let the king go to a square that is under check vision
+					// Unless... The move itself would allow us to capture the attacker
+					Piece* pAttackingPiece = pCheckedTile->GetPiece();
+					if(!pAttackingPiece)
+					{
+						dontAdd = true;
+						break;
+					}	
+					else
+					{
+						finalTiles.push_back(pPseudoTile);
+					}
+					break;
+				}	
+			}
+			if (!dontAdd)
+			{
+				finalTiles.push_back(pPseudoTile);	
+			}
 		}
+	}
+	else
+	{
+		for (Tile* pPseudoTile : m_validTiles)
+		{
+			for (Tile* pCheckedTile : checkedTiles)
+			{
+				if (pPseudoTile == pCheckedTile)
+				{
+					finalTiles.push_back(pPseudoTile);
+					break;
+				}
+			}
+		}
+	}
 
+
+	m_validTiles = finalTiles;
+
+	if (isWhite)
+	{
+		if (!playerIsWhite)
+		{
+			// AI Playing as White vs Black Pieces [Player]
+			
+		}
+		else if(!aiIsWhite)
+		{
+			// AI Pla
+		}
+		
+	}
+	else
+	{
 
 	}
 }
@@ -214,12 +287,12 @@ Board::~Board()
 
 }
 
-bool Board::Init(SDL_Renderer* pRenderer)
+void Board::Init(SDL_Renderer* pRenderer)
 {
 	if (!pRenderer)
 	{
 		std::cout << "Board failed to initialize - Missing SDL_Renderer!" << std::endl;
-		return false;
+		return;
 	}
 
 	// TODO: Make these more consistent dependant on resolution
@@ -251,6 +324,7 @@ bool Board::Init(SDL_Renderer* pRenderer)
 		m_players[0]->SetSide(ChessUser::Side::BOTTOM);
 		m_players[1]->SetWhite(false);
 		m_players[1]->SetSide(ChessUser::Side::TOP);
+		m_playersTurn = true;
 	}				
 	else			
 	{				
@@ -267,7 +341,11 @@ bool Board::Init(SDL_Renderer* pRenderer)
 			m_players[i]->Init(pRenderer, this);
 		}
 	}	
-	return m_players[0]->IsWhite();
+
+	if (!m_playersTurn)
+	{
+		RunAI(pRenderer, m_playersTurn);
+	}
 }
 
 void Board::Render(SDL_Renderer* pRenderer)
@@ -291,6 +369,22 @@ void Board::Render(SDL_Renderer* pRenderer)
 	}
 
 	RenderLegalMoves(pRenderer);
+
+	if (Piece* pSelected = m_pSelectedPiece)
+	{
+		if (!pSelected->RenderAsSelected(pRenderer))
+		{
+			m_pSelectedRect = nullptr;
+
+			pSelected->SetSelected(false);
+			m_pSelectedPiece = nullptr;
+
+			if (Tile* pPiecesTile = m_pPiecesTile)
+			{
+				m_pPiecesTile = nullptr;
+			}
+		}
+	}
 }
 
 Board::PiecePaths::PiecePaths(const char* a, const char* b)
@@ -304,19 +398,21 @@ Board::PiecePaths::PiecePaths()
 
 }
 
-void Board::GenerateLegalPawnMoves(int x, int y, bool isSouth, Piece* pSelectedPiece)
+void Board::GenerateLegalPawnMoves(Piece& pSelectedPiece)
 {
+	Coordinate pieceCoord = pSelectedPiece.GetCoordinate();
+	int x = pieceCoord.m_x;
+	int y = pieceCoord.m_y;
 	const int totalCoords = 6;
 	CoordSet valiCoords[totalCoords] = { };
 	int counter = 0;
+	const bool isSouth = pSelectedPiece.IsSouthPlaying();
 	int targetY = isSouth ? y - 1 : y + 1;
 	int exceptions = 0;
 	bool bCheckEnpassant = false;
-	Coordinate pieceCoord = pSelectedPiece->GetCoordinate();
 	const int pieceY = pieceCoord.m_y;
-	const bool side = pSelectedPiece->IsSouthPlaying();
-	const bool hasMoved = pSelectedPiece->HasMoved();
-	if (side)
+	const bool hasMoved = pSelectedPiece.HasMoved();
+	if (isSouth)
 	{
 		if (pieceY == 3)
 		{
@@ -446,7 +542,7 @@ void Board::GenerateLegalPawnMoves(int x, int y, bool isSouth, Piece* pSelectedP
 		{
 			// If it has a piece, AND we can capture it, its valid
 			// Else ignore
-			bool capturable = pSelectedPiece->CanCapture(pTargetPiece);
+			bool capturable = pSelectedPiece.CanCapture(pTargetPiece);
 			if (!capturable)
 			{
 				continue;
@@ -455,7 +551,7 @@ void Board::GenerateLegalPawnMoves(int x, int y, bool isSouth, Piece* pSelectedP
 			{
 				// Determine if it were to be enpassant
 				Coordinate b = pTargetPiece->GetCoordinate();
-				Coordinate a = pSelectedPiece->GetCoordinate();
+				Coordinate a = pSelectedPiece.GetCoordinate();
 				if (a.m_y == b.m_y)
 				{
 					// Adjacent
@@ -507,7 +603,7 @@ void Board::GenerateLegalPawnMoves(int x, int y, bool isSouth, Piece* pSelectedP
 		{
 			// No Piece
 			// Check Coords with same X Position
-			Coordinate pawnPos = pSelectedPiece->GetCoordinate();
+			Coordinate pawnPos = pSelectedPiece.GetCoordinate();
 			Coordinate tilePos = pQuery->GetCoordinate();
 			if (pawnPos.m_x != tilePos.m_x)
 			{
@@ -518,9 +614,9 @@ void Board::GenerateLegalPawnMoves(int x, int y, bool isSouth, Piece* pSelectedP
 	}
 }
 
-void Board::GenerateLegalKingMoves(int x, int y, bool isSouth, Piece* pSelectedPiece)
+void Board::GenerateLegalKingMoves(Piece& selectedPiece)
 {
-	Coordinate pieceCoord = pSelectedPiece->GetCoordinate();
+	Coordinate pieceCoord = selectedPiece.GetCoordinate();
 	Coordinate kingPositions[8] =
 	{
 		{ -1, -1},
@@ -534,8 +630,8 @@ void Board::GenerateLegalKingMoves(int x, int y, bool isSouth, Piece* pSelectedP
 	};	
 
 
-	const bool hasMoved = pSelectedPiece->HasMoved();
-	const bool isSouthPlaying = pSelectedPiece->IsSouthPlaying();
+	const bool hasMoved = selectedPiece.HasMoved();
+	const bool isSouthPlaying = selectedPiece.IsSouthPlaying();
 	const int tileIDOfKing = GetTileIDFromCoord(pieceCoord);
 	Tile* pKingTile = GetTile(tileIDOfKing);
 	if (!pKingTile)
@@ -653,16 +749,16 @@ void Board::GenerateLegalKingMoves(int x, int y, bool isSouth, Piece* pSelectedP
 	for (int i = 0; i < 8; i++)
 	{
 		Coordinate val = temp + kingPositions[i];
-		if (CheckPiece(pSelectedPiece, val))
+		if (CheckPiece(selectedPiece, val))
 		{
 
 		}
 	}
 }
 
-void Board::GenerateLegalHorseMoves(int x, int y, bool isSouth, Piece* pSelectedPiece)
+void Board::GenerateLegalHorseMoves(Piece& selectedPiece)
 {
-	Coordinate pieceCoord = pSelectedPiece->GetCoordinate();
+	Coordinate pieceCoord = selectedPiece.GetCoordinate();
 	Coordinate horsePositions[8] =
 	{
 		{ -2, -1},
@@ -680,26 +776,16 @@ void Board::GenerateLegalHorseMoves(int x, int y, bool isSouth, Piece* pSelected
 	{
 		temp = pieceCoord;
 		Coordinate val = temp + horsePositions[i];				
-		if (CheckPiece(pSelectedPiece, val))
+		if (CheckPiece(selectedPiece, val))
 		{
 
 		}
 	}
 }
 
-void Board::GenerateLegalBishopMoves(int x, int y, bool isSouth, Piece* pSelectedPiece)
+void Board::GenerateLegalBishopMoves(Piece& selectedPiece)
 {
-	//const int totalCoords = 6;
-	//CoordSet valiCoords[totalCoords] = { };
-	//int counter = 0;
-	//int targetY = isSouth ? y - 1 : y + 1;
-	//int exceptions = 0;
-	//bool bCheckEnpassant = false;
-	Coordinate pieceCoord = pSelectedPiece->GetCoordinate();
-	//const int pieceY = pieceCoord.m_y;
-	//const bool side = pSelectedPiece->IsSouthPlaying();
-	//const bool hasMoved = pSelectedPiece->HasMoved();
-
+	Coordinate pieceCoord = selectedPiece.GetCoordinate();
 	auto CheckBishop = [&](bool& bObstructed, Coordinate diagonalCoord, Coordinate rule)
 	{
 		while (!bObstructed)
@@ -733,7 +819,7 @@ void Board::GenerateLegalBishopMoves(int x, int y, bool isSouth, Piece* pSelecte
 				}
 				if (Piece* pPiece = pTile->GetPiece())
 				{
-					bool amWhite = pSelectedPiece->GetFlags() & (uint32_t)Piece::PieceFlag::White;
+					bool amWhite = selectedPiece.GetFlags() & (uint32_t)Piece::PieceFlag::White;
 					bool opponentWhite = pPiece->GetFlags()  & (uint32_t)Piece::PieceFlag::White;
 					if (amWhite == opponentWhite)
 					{
@@ -820,12 +906,14 @@ void Board::GenerateLegalBishopMoves(int x, int y, bool isSouth, Piece* pSelecte
 	}
 }
 
-void Board::GenerateLegalRookMoves(int x, int y, bool isSouth, Piece* pSelectedPiece)
+void Board::GenerateLegalRookMoves(Piece& selectedPiece)
 {
-	Coordinate pieceCoord = pSelectedPiece->GetCoordinate();
+	Coordinate pieceCoord = selectedPiece.GetCoordinate();
+	int x = pieceCoord.m_x;
+	int y = pieceCoord.m_y;
 	Coordinate coord;
 
-	//bool isWhite = pSelectedPiece->GetFlags() & (uint32_t)Piece::PieceFlag::White;
+	//bool isWhite = selectedPiece.GetFlags() & (uint32_t)Piece::PieceFlag::White;
 	// Check Horizontals
 	int left = x - 1;
 	while (true)
@@ -835,7 +923,7 @@ void Board::GenerateLegalRookMoves(int x, int y, bool isSouth, Piece* pSelectedP
 
 		coord.m_x = left;
 		coord.m_y = y;
-		if (!CheckPiece(pSelectedPiece, coord))
+		if (!CheckPiece(selectedPiece, coord))
 		{
 			break;
 		}
@@ -850,7 +938,7 @@ void Board::GenerateLegalRookMoves(int x, int y, bool isSouth, Piece* pSelectedP
 
 		coord.m_x = right;
 		coord.m_y = y;
-		if (!CheckPiece(pSelectedPiece, coord))
+		if (!CheckPiece(selectedPiece, coord))
 		{
 			break;
 		}
@@ -865,7 +953,7 @@ void Board::GenerateLegalRookMoves(int x, int y, bool isSouth, Piece* pSelectedP
 
 		coord.m_x = x;
 		coord.m_y = up;
-		if (!CheckPiece(pSelectedPiece, coord))
+		if (!CheckPiece(selectedPiece, coord))
 		{
 			break;
 		}
@@ -880,7 +968,7 @@ void Board::GenerateLegalRookMoves(int x, int y, bool isSouth, Piece* pSelectedP
 
 		coord.m_x = x;
 		coord.m_y = down;
-		if (!CheckPiece(pSelectedPiece, coord))
+		if (!CheckPiece(selectedPiece, coord))
 		{
 			break;
 		}
@@ -888,10 +976,28 @@ void Board::GenerateLegalRookMoves(int x, int y, bool isSouth, Piece* pSelectedP
 	}
 }
 
-void Board::GenerateLegalQueenMoves(int x, int y, bool isSouth, Piece* pSelectedPiece)
+void Board::GenerateLegalQueenMoves(Piece& selectedPiece)
 {
-	GenerateLegalBishopMoves(x, y, isSouth, pSelectedPiece);
-	GenerateLegalRookMoves(x, y, isSouth, pSelectedPiece);
+	GenerateLegalBishopMoves(selectedPiece);
+	GenerateLegalRookMoves(selectedPiece);
+}
+
+// If Positive - Position Favours the player
+// If Negative - Position favours the AI
+// The Numerical Value represents by HOW much it favours who
+int Board::EvaluatePosition()
+{
+	// Get Material for both sides and return
+
+	int playerActivePieces;
+	int playerCapturedPieces;
+	m_player.GetMaterialScore(playerActivePieces, playerCapturedPieces);
+
+	int aiActivePieces;
+	int aiCapturedPieces;
+	m_opponent.GetMaterialScore(aiActivePieces, aiCapturedPieces);
+
+	return playerActivePieces - aiActivePieces;
 }
 
 const std::vector<Tile*>& Board::GetValidTiles() const
@@ -928,11 +1034,244 @@ void Board::SetPreviouslyMoved(Piece* pSelectedPiece)
 	m_pPreviousMovedPiece = pSelectedPiece;
 }
 
+void Board::OnLeftClickDown(SDL_Renderer* pRenderer)
+{
+	const bool playerIsWhite = m_player.IsWhite();
+	
+	if (Tile* pTile = GetTileAtPoint(&m_mousePosition))
+	{
+		if (SDL_Rect* pawnTransform = &pTile->GetTransform())
+		{
+			if (SDL_PointInRect(&m_mousePosition, pawnTransform))
+			{
+				if (Piece* pOccupant = pTile->GetPiece())
+				{
+					const bool isWhite = pOccupant->GetFlags() & (uint32_t)Piece::PieceFlag::White;
+					if (isWhite != playerIsWhite && !m_disableAI)
+					{
+						ClearInput();
+					}
+					else
+					{
+						m_resetPos = pOccupant->GetTransform();
+						m_pSelectedRect = &pOccupant->GetTransform();
+						m_pPiecesTile = pTile;
+						m_pSelectedPiece = pOccupant;
+						m_pSelectedPiece->SetSelected(true);
+					}
+				}
+			}
+		}
+	}
+
+	if (IsPlayersTurn())
+	{
+		GenerateLegalMoves(m_pSelectedPiece);
+	}
+}
+
+void Board::OnLeftClickRelease(SDL_Renderer* pRenderer)
+{
+	bool allowMove = false;
+	bool isACapture = false;
+	Coordinate newCoord;
+	Tile* pNewTile = nullptr;
+	// If release position is in the valid tiles list - drop it off there
+
+	m_player.MakeMove(pRenderer);
+
+	if (IsPlayersTurn())
+	{
+		//for (int i = 0; i < Board::m_iColumns; i++)
+		{
+			if (Tile* pTile = GetTileAtPoint(&m_mousePosition))
+			{
+				if (SDL_Rect* pawnTransform = &pTile->GetTransform())
+				{
+					const bool isAPawn = m_pSelectedPiece ? m_pSelectedPiece->GetFlags() & (uint32_t)Piece::PieceFlag::Pawn : false;
+					auto Predicate = [&pTile](Tile* pOtherTile)
+					{
+						return pTile == pOtherTile;
+					};
+					if (TileMatch(Predicate, 1))
+					{
+						const bool isTileAPromotionSquare = pTile->IsPromotionSquare();
+						if (Piece* pDefender = pTile->GetPiece())
+						{
+							isACapture = true;
+
+							pDefender->SetCaptured(true);
+
+							if (isAPawn && isTileAPromotionSquare && m_pSelectedPiece)
+							{
+								if (Piece* pSelectedPiece = m_pSelectedPiece)
+								{
+									pSelectedPiece->Promote(pRenderer);
+								}
+							}
+						}
+						else
+						{
+							// Need to consider EnPassant
+							// If the piece could move to this square was a pawn
+							// And the Tile BELOW it HAS a Pawn as well.
+							// Need to terminate that tiles piece
+							if (Piece* pSelectedPiece = m_pSelectedPiece)
+							{
+								pSelectedPiece->CheckEnpassant(*pTile, *this);
+
+								if (isAPawn)
+								{
+									if (isTileAPromotionSquare)
+									{
+										pSelectedPiece->Promote(pRenderer);
+									}
+								}
+								else
+								{
+									pSelectedPiece->CheckCastling(*pTile, *this);
+								}
+							}
+						}
+
+						allowMove = true;
+						// Need to apply piece offsets
+						newCoord = pTile->GetCoordinate();
+						pNewTile = pTile;
+						//break;
+					}
+				}
+			}
+		}
+	}
+
+	if (allowMove)
+	{
+		if (Piece* pSelectedPiece = m_pSelectedPiece)
+		{
+			// Need to tell previous tile that we're gone
+			// And New tile that we have arrived
+			if (Tile* pPrevTile = m_pPiecesTile)
+			{
+				pPrevTile->SetPiece(nullptr);
+				m_pPiecesTile = nullptr;
+			}
+			pSelectedPiece->SetCoord(newCoord);
+			pSelectedPiece->UpdatePosFromCoord();
+			if (Tile* pDestinationTile = pNewTile)
+			{
+				pDestinationTile->SetPiece(pSelectedPiece);
+			}
+			m_playersTurn = false;
+
+			m_pSelectedRect = nullptr;
+			
+			SetPreviouslyMoved(pSelectedPiece);
+			pSelectedPiece->SetSelected(false);
+			m_pSelectedPiece = nullptr;
+			
+			//if (Tile* pPiecesTile = m_pPiecesTile)
+			//{
+			//	m_pPiecesTile = nullptr;
+			//}
+
+			bool resultedInCheck = m_player.DetectChecks();
+			if (resultedInCheck)
+			{
+				volatile int i = 5;
+			}
+			RunAI(pRenderer, m_playersTurn);
+		}
+	}
+	else
+	{
+		if (m_pSelectedRect)
+		{
+			m_pSelectedRect->x = m_resetPos.x;
+			m_pSelectedRect->y = m_resetPos.y;
+		}
+	}
+
+	ClearInput();
+}
+
+void Board::Process(float dt)
+{
+	if (SDL_Rect* pRect = m_pSelectedRect)
+	{
+		pRect->x = m_mousePosition.x - (pRect->w / 2);
+		pRect->y = m_mousePosition.y - (pRect->h / 2);
+	}
+}
+
+bool Board::IsPlayersTurn() const
+{
+	return m_playersTurn || (!m_playersTurn && m_disableAI);
+}
+
+bool Board::IsTileDefended(Tile& pTile, bool attackerIsWhite)
+{
+	const bool playerIsWhite = m_player.IsWhite();
+	// If attacker is white, iterate over blacks pieces, to see what has vision on pTile
+	if (attackerIsWhite)
+	{
+		if (playerIsWhite)
+		{
+			return m_opponent.CanAttackTile(pTile);
+		}
+		else
+		{
+			return m_player.CanAttackTile(pTile);
+		}
+	}
+	else
+	{
+		if (!playerIsWhite)
+		{
+			return m_opponent.CanAttackTile(pTile);
+		}
+		else
+		{
+			return m_player.CanAttackTile(pTile);
+		}
+	}
+}
+
+void Board::ClearInput()
+{
+	ClearLegalMoves();
+
+	m_pSelectedRect = nullptr;
+
+	if (Piece* pSelected = m_pSelectedPiece)
+	{
+		pSelected->SetSelected(false);
+		m_pSelectedPiece = nullptr;
+	}
+	if (Tile* pPiecesTile = m_pPiecesTile)
+	{
+		m_pPiecesTile = nullptr;
+	}
+}
+
 void Board::RunAI(SDL_Renderer* pRenderer, bool& m_playersTurn)
 {
+	if (m_disableAI)
+	{
+		//m_playersTurn = true;
+		return;
+	}
+
+	// Let'see if i'm in check	
+
 	if (Piece* pPieceToMove = m_opponent.MakeMove(pRenderer))
 	{
 		SetPreviouslyMoved(pPieceToMove);
 	}
 	m_playersTurn = true;
+	bool resultedInCheck = m_opponent.DetectChecks();
+	if (resultedInCheck)
+	{
+		volatile int i = 5;
+	}
 }

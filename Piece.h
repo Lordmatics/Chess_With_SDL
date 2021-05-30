@@ -55,6 +55,7 @@ public:
 	const bool HasMoved() const { return m_bHasMoved; }
 	void CheckEnpassant(const Tile& tile, Board& board);
 	void CheckCastling(const Tile& pTile, Board& m_board);
+	bool CanAtackCoord(const Coordinate& param1) const;
 private:
 	ChessUser* m_pOwner;
 	uint32_t m_pieceflags;	

@@ -36,6 +36,14 @@ Coordinate Coordinate::operator-(const Coordinate& other)
 	return coord;
 }
 
+Coordinate Coordinate::operator*(int other)
+{
+	Coordinate coord;
+	coord.m_x = m_x * other;
+	coord.m_y = m_y * other;
+	return coord;
+}
+
 Coordinate Coordinate::operator+(const Coordinate& other)
 {
 	Coordinate coord;

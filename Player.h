@@ -7,5 +7,7 @@ public:
 
 	Player();
 	virtual ~Player();
+
+	virtual Piece* MakeMove(SDL_Renderer* pRenderer) override;
 };
 

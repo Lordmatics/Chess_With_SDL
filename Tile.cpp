@@ -178,6 +178,11 @@ void Tile::Debug()
 	}
 }
 
+bool Tile::IsDefended()
+{
+	throw std::logic_error("The method or operation is not implemented.");
+}
+
 void Tile::ResetLegalHighlight()
 {
 	SDL_Rect& transform = GetTransform();

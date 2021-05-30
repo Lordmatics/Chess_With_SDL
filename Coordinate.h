@@ -10,6 +10,8 @@ struct Coordinate
 	Coordinate& operator=(const Coordinate& other);
 	Coordinate operator+(const Coordinate& other);
 	Coordinate operator-(const Coordinate& other);
+	Coordinate operator*(int other);
+
 	bool operator ==(const Coordinate& other);
 	void operator +=(const Coordinate& other);
 	void operator -=(const Coordinate& other);

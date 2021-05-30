@@ -31,18 +31,33 @@ public:
 
 	template<class Function>
 	bool VisitMaterial(const Function& func);
+
+	void GetMaterialScore(int& inPlayMaterialScore, int& capturedMaterialScore);
+
+	bool IsInCheck() const { return m_bIsInCheck; }
+	void SetInCheck(bool val) { m_bIsInCheck = val; }
+
+	bool IsCheckMated() const { return m_bCheckMated; }
+	void SetCheckMated(bool val) { m_bCheckMated = val; }
+
+	bool IsStaleMated() const { return m_bStaleMated; }
+	void SetStaleMate(bool val) { m_bStaleMated = val; }
+
+	bool CanAttackTile(Tile& pTile);
+
+	virtual bool DetectChecks();
+
+	virtual Piece* MakeMove(SDL_Renderer* pRenderer) = 0;
 protected:
 
 	Side m_side;
-	// TODO: Need to change this, to reference Tiles on teh Board instead
-	std::vector<Tile*> m_materials;
-	//Tile m_material[2][8];
-
 	Piece m_material[16];
-
 	Board* m_pBoard;
-	bool m_bIsWhite;
 
+	bool m_bIsWhite;
+	bool m_bIsInCheck;
+	bool m_bCheckMated;
+	bool m_bStaleMated;
 };
 
 template<class Function>

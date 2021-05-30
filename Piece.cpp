@@ -328,10 +328,36 @@ void Piece::CheckEnpassant(const Tile& tileToCapture, Board& board)
 		return;
 	}
 
+	// Don't do it, if we have confirmed a normal capture
+	if (Piece* pTargetPiece = tileToCapture.GetPiece())
+	{
+		return;
+	}
+
 	Coordinate targetTile = tileToCapture.GetCoordinate();
 	Coordinate myCoord = GetCoordinate();
 	const bool side = IsSouthPlaying();
 	const int extra = side ? -1 : 1;
+
+	const bool isBlack = GetFlags() & (uint32_t)Piece::PieceFlag::Black;
+	if (side)
+	{
+		// South side
+		if (myCoord.m_y != 3)
+		{
+			return;
+		}
+	}
+	else
+	{
+		// North Side
+		if (myCoord.m_y != 4)
+		{
+			return;
+		}
+	}
+
+
 	if (targetTile.m_y == (myCoord.m_y + extra) && targetTile.m_x != myCoord.m_x)
 	{
 		if (side)
@@ -347,6 +373,12 @@ void Piece::CheckEnpassant(const Tile& tileToCapture, Board& board)
 		{
 			if (Piece* pEnpassantPiece = pEnpassantTile->GetPiece())
 			{
+				const bool enpassantIsBlack = pEnpassantPiece->GetFlags() & (uint32_t)Piece::PieceFlag::Black;
+				if(isBlack == enpassantIsBlack)
+				{
+					// Don't consume yourself
+					return;
+				}
 				if (pEnpassantPiece->GetFlags() & (uint32_t)Piece::PieceFlag::Pawn)
 				{
 					// Destroy
@@ -413,6 +445,106 @@ void Piece::CheckCastling(const Tile& pTile, Board& m_board)
 			}
 		}
 	}
+}
+
+bool Piece::CanAtackCoord(const Coordinate& target) const
+{
+	const Coordinate& myCoord = GetCoordinate();
+	const int myX = myCoord.m_x;
+	const int myY = myCoord.m_y;
+
+	const int targetX = target.m_x;
+	const int targetY = target.m_y;	
+
+	const bool isSouthPlaying = IsSouthPlaying();
+	if (m_pieceflags & (uint32_t)PieceFlag::Pawn)
+	{
+		if (isSouthPlaying)
+		{
+			// Pawns move north
+			// Can Defend if target is diagonally by 1 square
+			if (targetX == myX - 1 || targetX == myX + 1)
+			{
+				if (targetY == myY - 1)
+				{
+					return true;
+				}
+			}
+		}
+		else
+		{
+			// Pawns move south
+			// Can Defend if target is diagonally by 1 square
+			if (targetX == myX - 1 || targetX == myX + 1)
+			{
+				if (targetY == myY + 1)
+				{
+					return true;
+				}
+			}
+		}
+	}
+	else if (m_pieceflags & (uint32_t)PieceFlag::King)
+	{
+		// King is hard to tell if they can defend, because they won't be able to defend
+		// If it puts themselves in check... for now, let's not let kings defend
+		return false;
+	}
+	else if (m_pieceflags & (uint32_t)PieceFlag::Horse)
+	{
+		// horse can defend in an L Shape
+		if (myX == targetX + 1)
+		{
+			// If it's to my right
+			if (myY == targetY + 2 ||
+				myY == targetY - 2)
+			{
+				return true;
+			}
+		}
+		else if (myX == targetX + 2)
+		{
+			// Further to my right
+			if (myY == targetY + 1 ||
+				myY == targetY - 1)
+			{
+				return true;
+			}
+		}
+		else if (myX == targetX - 1)
+		{
+			// If its to my left
+			if (myY == targetY + 2 ||
+				myY == targetY - 2)
+			{
+				return true;
+			}
+		}
+		else if (myX == targetX - 2)
+		{
+			// further to my left
+			if (myY == targetY + 1 ||
+				myY == targetY - 1)
+			{
+				return true;
+			}
+		}
+	}
+	else if (m_pieceflags & (uint32_t)PieceFlag::Bishop)
+	{
+		// Bishop can defend the diagonals
+		// so as long as the gradient is uniform
+		// We can defend
+		// Will need to see if any tile along that gradient is blocking though
+
+	}
+	else if (m_pieceflags & (uint32_t)PieceFlag::Rook)
+	{
+	}
+	else if (m_pieceflags & (uint32_t)PieceFlag::Queen)
+	{
+	}
+	return false;
 }
 
 //const bool Piece::HasMoved() const

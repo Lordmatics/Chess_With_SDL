@@ -8,9 +8,11 @@
 #include "ChessUser.h"
 #include "Player.h"
 #include "BasicAI.h"
+#include "SDL_events.h"
 
 struct SDL_Window;
 struct SDL_Renderer;
+
 class GameLoop
 {
 public:
@@ -30,6 +32,10 @@ public:
 private:
 	void ConstructSDL(int w = 1920, int h = 1080, bool fullscreen = false);
 
+	void OnMouseDown(const SDL_Event& event);
+	void OnMouseUp(const SDL_Event& event);
+	void OnMouse(const SDL_Event& event);
+
 	SDL_Window* m_pGameWindow;
 	SDL_Renderer* m_pRenderer;
 	SDL_Texture* m_pHighlightedTex;
@@ -37,19 +43,18 @@ private:
 	bool m_bPadding : 7;
 	int m_iFrameCount;
 
-	bool m_bIgnorePress;
-	bool m_bPlayerIsWhite;
+	//bool m_bIgnorePress;
 	Board m_board;
 
 	bool m_LMBD;
-	bool m_playersTurn;
+	//bool m_playersTurn;
 	SDL_Point m_mousePosition;
-	SDL_Rect* m_pSelectedRect;
-	SDL_Point m_clickOffset;
+	//SDL_Rect* m_pSelectedRect;
+	//SDL_Point m_clickOffset;
 
-	SDL_Rect m_resetPos;
-	Tile* m_pPiecesTile;
-	Piece* m_pSelectedPiece;
-	void ClearInput();
+	//SDL_Rect m_resetPos;
+	//Tile* m_pPiecesTile;
+	//Piece* m_pSelectedPiece;
+	//void ClearInput();
 };
 

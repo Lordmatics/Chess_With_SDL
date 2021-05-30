@@ -10,3 +10,8 @@ Player::~Player()
 {
 
 }
+
+Piece* Player::MakeMove(SDL_Renderer* pRenderer)
+{
+	return nullptr;
+}
