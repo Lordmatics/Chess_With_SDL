@@ -15,7 +15,7 @@ BasicAI::~BasicAI()
 
 }
 
-Piece* BasicAI::MakeMove(SDL_Renderer* pRenderer)
+Piece* BasicAI::MakeMove(SDL_Renderer* pRenderer, Tile& tileOnRelease)
 {
 	const bool playCompletelyRandomly = true;
 	//int frameDelay = 0;

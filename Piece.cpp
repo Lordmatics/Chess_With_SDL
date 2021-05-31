@@ -547,6 +547,25 @@ bool Piece::CanAtackCoord(const Coordinate& target) const
 	return false;
 }
 
+void Piece::OnPieceMoved(const Coordinate& newCoord)
+{
+	const Coordinate& prevCoord = GetCoordinate();
+	SetCoord(newCoord);
+	UpdatePosFromCoord();
+
+	if (ChessUser* pOwner = m_pOwner)
+	{
+		if (Player* pPlayer = dynamic_cast<Player*>(pOwner))
+		{
+			std::cout << "[Player] OnPieceMoved: " << GetPieceName() << "(" << prevCoord.m_x << " , " << prevCoord.m_y << ") --> (" << newCoord.m_x << " , " << newCoord.m_y << ")" << std::endl;
+		}
+		else if (BasicAI* pPlayer = dynamic_cast<BasicAI*>(pOwner))
+		{
+			std::cout << "[AI] OnPieceMoved: " << GetPieceName() << "(" << prevCoord.m_x << " , " << prevCoord.m_y << ") --> (" << newCoord.m_x << " , " << newCoord.m_y << ")" << std::endl;
+		}
+	}
+}
+
 //const bool Piece::HasMoved() const
 //{
 //	const Coordinate& coord = GetCoordinate();

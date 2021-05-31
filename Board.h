@@ -10,7 +10,7 @@
 
 struct SDL_Renderer;
 
-const bool m_disableAI = false;
+const bool m_disableAI = true;
 
 class Board
 {

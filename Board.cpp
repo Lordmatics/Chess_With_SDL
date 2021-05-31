@@ -321,16 +321,20 @@ void Board::Init(SDL_Renderer* pRenderer)
 	if (random == 1)
 	{	
 		m_players[0]->SetWhite(true);
+		m_players[0]->SetMyTurn(true);
 		m_players[0]->SetSide(ChessUser::Side::BOTTOM);
 		m_players[1]->SetWhite(false);
+		m_players[1]->SetMyTurn(false);
 		m_players[1]->SetSide(ChessUser::Side::TOP);
 		m_playersTurn = true;
 	}				
 	else			
 	{				
 		m_players[0]->SetWhite(false);
+		m_players[0]->SetMyTurn(false);
 		m_players[0]->SetSide(ChessUser::Side::BOTTOM);
 		m_players[1]->SetWhite(true);
+		m_players[1]->SetMyTurn(true);
 		m_players[1]->SetSide(ChessUser::Side::TOP);
 	}
 
@@ -339,7 +343,7 @@ void Board::Init(SDL_Renderer* pRenderer)
 		if (m_players[i])
 		{
 			m_players[i]->Init(pRenderer, this);
-		}
+		}		
 	}	
 
 	if (!m_playersTurn)
@@ -370,21 +374,26 @@ void Board::Render(SDL_Renderer* pRenderer)
 
 	RenderLegalMoves(pRenderer);
 
-	if (Piece* pSelected = m_pSelectedPiece)
+	for (int i = 0; i < 2 ; i++)
 	{
-		if (!pSelected->RenderAsSelected(pRenderer))
-		{
-			m_pSelectedRect = nullptr;
-
-			pSelected->SetSelected(false);
-			m_pSelectedPiece = nullptr;
-
-			if (Tile* pPiecesTile = m_pPiecesTile)
-			{
-				m_pPiecesTile = nullptr;
-			}
-		}
+		m_players[i]->Render(pRenderer);
 	}
+
+	//if (Piece* pSelected = m_player. m_pSelectedPiece)
+	//{
+	//	if (!pSelected->RenderAsSelected(pRenderer))
+	//	{
+	//		m_pSelectedRect = nullptr;
+	//
+	//		pSelected->SetSelected(false);
+	//		m_pSelectedPiece = nullptr;
+	//
+	//		if (Tile* pPiecesTile = m_pPiecesTile)
+	//		{
+	//			m_pPiecesTile = nullptr;
+	//		}
+	//	}
+	//}
 }
 
 Board::PiecePaths::PiecePaths(const char* a, const char* b)
@@ -1036,38 +1045,38 @@ void Board::SetPreviouslyMoved(Piece* pSelectedPiece)
 
 void Board::OnLeftClickDown(SDL_Renderer* pRenderer)
 {
-	const bool playerIsWhite = m_player.IsWhite();
-	
-	if (Tile* pTile = GetTileAtPoint(&m_mousePosition))
-	{
-		if (SDL_Rect* pawnTransform = &pTile->GetTransform())
-		{
-			if (SDL_PointInRect(&m_mousePosition, pawnTransform))
-			{
-				if (Piece* pOccupant = pTile->GetPiece())
-				{
-					const bool isWhite = pOccupant->GetFlags() & (uint32_t)Piece::PieceFlag::White;
-					if (isWhite != playerIsWhite && !m_disableAI)
-					{
-						ClearInput();
-					}
-					else
-					{
-						m_resetPos = pOccupant->GetTransform();
-						m_pSelectedRect = &pOccupant->GetTransform();
-						m_pPiecesTile = pTile;
-						m_pSelectedPiece = pOccupant;
-						m_pSelectedPiece->SetSelected(true);
-					}
-				}
-			}
-		}
-	}
+	//const bool playerIsWhite = m_player.IsWhite();	
+	m_player.TryGenerateMoves(pRenderer, m_mousePosition);
+	//if (Tile* pTile = GetTileAtPoint(&m_mousePosition))
+	//{
+	//	if (SDL_Rect* pawnTransform = &pTile->GetTransform())
+	//	{
+	//		if (SDL_PointInRect(&m_mousePosition, pawnTransform))
+	//		{
+	//			if (Piece* pOccupant = pTile->GetPiece())
+	//			{
+	//				const bool isWhite = pOccupant->GetFlags() & (uint32_t)Piece::PieceFlag::White;
+	//				if (isWhite != playerIsWhite && !m_disableAI)
+	//				{
+	//					ClearInput();
+	//				}
+	//				else
+	//				{
+	//					m_resetPos = pOccupant->GetTransform();
+	//					m_pSelectedRect = &pOccupant->GetTransform();
+	//					m_pPiecesTile = pTile;
+	//					m_pSelectedPiece = pOccupant;
+	//					m_pSelectedPiece->SetSelected(true);
+	//				}
+	//			}
+	//		}
+	//	}
+	//}
 
-	if (IsPlayersTurn())
-	{
-		GenerateLegalMoves(m_pSelectedPiece);
-	}
+	//if (IsPlayersTurn())
+	//{
+	//	GenerateLegalMoves(m_pSelectedPiece);
+	//}
 }
 
 void Board::OnLeftClickRelease(SDL_Renderer* pRenderer)
@@ -1078,129 +1087,132 @@ void Board::OnLeftClickRelease(SDL_Renderer* pRenderer)
 	Tile* pNewTile = nullptr;
 	// If release position is in the valid tiles list - drop it off there
 
-	m_player.MakeMove(pRenderer);
-
-	if (IsPlayersTurn())
+	if (Tile* pTile = GetTileAtPoint(&m_mousePosition))
 	{
-		//for (int i = 0; i < Board::m_iColumns; i++)
-		{
-			if (Tile* pTile = GetTileAtPoint(&m_mousePosition))
-			{
-				if (SDL_Rect* pawnTransform = &pTile->GetTransform())
-				{
-					const bool isAPawn = m_pSelectedPiece ? m_pSelectedPiece->GetFlags() & (uint32_t)Piece::PieceFlag::Pawn : false;
-					auto Predicate = [&pTile](Tile* pOtherTile)
-					{
-						return pTile == pOtherTile;
-					};
-					if (TileMatch(Predicate, 1))
-					{
-						const bool isTileAPromotionSquare = pTile->IsPromotionSquare();
-						if (Piece* pDefender = pTile->GetPiece())
-						{
-							isACapture = true;
-
-							pDefender->SetCaptured(true);
-
-							if (isAPawn && isTileAPromotionSquare && m_pSelectedPiece)
-							{
-								if (Piece* pSelectedPiece = m_pSelectedPiece)
-								{
-									pSelectedPiece->Promote(pRenderer);
-								}
-							}
-						}
-						else
-						{
-							// Need to consider EnPassant
-							// If the piece could move to this square was a pawn
-							// And the Tile BELOW it HAS a Pawn as well.
-							// Need to terminate that tiles piece
-							if (Piece* pSelectedPiece = m_pSelectedPiece)
-							{
-								pSelectedPiece->CheckEnpassant(*pTile, *this);
-
-								if (isAPawn)
-								{
-									if (isTileAPromotionSquare)
-									{
-										pSelectedPiece->Promote(pRenderer);
-									}
-								}
-								else
-								{
-									pSelectedPiece->CheckCastling(*pTile, *this);
-								}
-							}
-						}
-
-						allowMove = true;
-						// Need to apply piece offsets
-						newCoord = pTile->GetCoordinate();
-						pNewTile = pTile;
-						//break;
-					}
-				}
-			}
-		}
+		m_player.MakeMove(pRenderer, *pTile);
 	}
 
-	if (allowMove)
-	{
-		if (Piece* pSelectedPiece = m_pSelectedPiece)
-		{
-			// Need to tell previous tile that we're gone
-			// And New tile that we have arrived
-			if (Tile* pPrevTile = m_pPiecesTile)
-			{
-				pPrevTile->SetPiece(nullptr);
-				m_pPiecesTile = nullptr;
-			}
-			pSelectedPiece->SetCoord(newCoord);
-			pSelectedPiece->UpdatePosFromCoord();
-			if (Tile* pDestinationTile = pNewTile)
-			{
-				pDestinationTile->SetPiece(pSelectedPiece);
-			}
-			m_playersTurn = false;
 
-			m_pSelectedRect = nullptr;
-			
-			SetPreviouslyMoved(pSelectedPiece);
-			pSelectedPiece->SetSelected(false);
-			m_pSelectedPiece = nullptr;
-			
-			//if (Tile* pPiecesTile = m_pPiecesTile)
-			//{
-			//	m_pPiecesTile = nullptr;
-			//}
+	//if (IsPlayersTurn())
+	//{
+	//	//for (int i = 0; i < Board::m_iColumns; i++)
+	//	{
+	//		if (Tile* pTile = GetTileAtPoint(&m_mousePosition))
+	//		{
+	//			if (SDL_Rect* pawnTransform = &pTile->GetTransform())
+	//			{
+	//				const bool isAPawn = m_pSelectedPiece ? m_pSelectedPiece->GetFlags() & (uint32_t)Piece::PieceFlag::Pawn : false;
+	//				auto Predicate = [&pTile](Tile* pOtherTile)
+	//				{
+	//					return pTile == pOtherTile;
+	//				};
+	//				if (TileMatch(Predicate, 1))
+	//				{
+	//					const bool isTileAPromotionSquare = pTile->IsPromotionSquare();
+	//					if (Piece* pDefender = pTile->GetPiece())
+	//					{
+	//						isACapture = true;
 
-			bool resultedInCheck = m_player.DetectChecks();
-			if (resultedInCheck)
-			{
-				volatile int i = 5;
-			}
-			RunAI(pRenderer, m_playersTurn);
-		}
-	}
-	else
-	{
-		if (m_pSelectedRect)
-		{
-			m_pSelectedRect->x = m_resetPos.x;
-			m_pSelectedRect->y = m_resetPos.y;
-		}
-	}
+	//						pDefender->SetCaptured(true);
 
-	ClearInput();
+	//						if (isAPawn && isTileAPromotionSquare && m_pSelectedPiece)
+	//						{
+	//							if (Piece* pSelectedPiece = m_pSelectedPiece)
+	//							{
+	//								pSelectedPiece->Promote(pRenderer);
+	//							}
+	//						}
+	//					}
+	//					else
+	//					{
+	//						// Need to consider EnPassant
+	//						// If the piece could move to this square was a pawn
+	//						// And the Tile BELOW it HAS a Pawn as well.
+	//						// Need to terminate that tiles piece
+	//						if (Piece* pSelectedPiece = m_pSelectedPiece)
+	//						{
+	//							pSelectedPiece->CheckEnpassant(*pTile, *this);
+
+	//							if (isAPawn)
+	//							{
+	//								if (isTileAPromotionSquare)
+	//								{
+	//									pSelectedPiece->Promote(pRenderer);
+	//								}
+	//							}
+	//							else
+	//							{
+	//								pSelectedPiece->CheckCastling(*pTile, *this);
+	//							}
+	//						}
+	//					}
+
+	//					allowMove = true;
+	//					// Need to apply piece offsets
+	//					newCoord = pTile->GetCoordinate();
+	//					pNewTile = pTile;
+	//					//break;
+	//				}
+	//			}
+	//		}
+	//	}
+	//}
+
+	//if (allowMove)
+	//{
+	//	if (Piece* pSelectedPiece = m_pSelectedPiece)
+	//	{
+	//		// Need to tell previous tile that we're gone
+	//		// And New tile that we have arrived
+	//		if (Tile* pPrevTile = m_pPiecesTile)
+	//		{
+	//			pPrevTile->SetPiece(nullptr);
+	//			m_pPiecesTile = nullptr;
+	//		}
+	//		pSelectedPiece->SetCoord(newCoord);
+	//		pSelectedPiece->UpdatePosFromCoord();
+	//		if (Tile* pDestinationTile = pNewTile)
+	//		{
+	//			pDestinationTile->SetPiece(pSelectedPiece);
+	//		}
+	//		m_playersTurn = false;
+
+	//		m_pSelectedRect = nullptr;
+	//		
+	//		SetPreviouslyMoved(pSelectedPiece);
+	//		pSelectedPiece->SetSelected(false);
+	//		m_pSelectedPiece = nullptr;
+	//		
+	//		//if (Tile* pPiecesTile = m_pPiecesTile)
+	//		//{
+	//		//	m_pPiecesTile = nullptr;
+	//		//}
+
+	//		bool resultedInCheck = m_player.DetectChecks();
+	//		if (resultedInCheck)
+	//		{
+	//			volatile int i = 5;
+	//		}
+	//		RunAI(pRenderer, m_playersTurn);
+	//	}
+	//}
+	//else
+	//{
+	//	if (m_pSelectedRect)
+	//	{
+	//		m_pSelectedRect->x = m_resetPos.x;
+	//		m_pSelectedRect->y = m_resetPos.y;
+	//	}
+	//}
+
+	//ClearInput();
 }
 
 void Board::Process(float dt)
 {
-	if (SDL_Rect* pRect = m_pSelectedRect)
+	for (int i = 0; i < 2 ; i++)
 	{
-		pRect->x = m_mousePosition.x - (pRect->w / 2);
-		pRect->y = m_mousePosition.y - (pRect->h / 2);
+		m_players[i]->Process(dt, m_mousePosition);
 	}
 }
 
@@ -1264,10 +1276,12 @@ void Board::RunAI(SDL_Renderer* pRenderer, bool& m_playersTurn)
 
 	// Let'see if i'm in check	
 
-	if (Piece* pPieceToMove = m_opponent.MakeMove(pRenderer))
-	{
-		SetPreviouslyMoved(pPieceToMove);
-	}
+	// Refactor AI
+	//if (Piece* pPieceToMove = m_opponent.MakeMove(pRenderer, nullptr))
+	//{
+	//	SetPreviouslyMoved(pPieceToMove);
+	//}
+
 	m_playersTurn = true;
 	bool resultedInCheck = m_opponent.DetectChecks();
 	if (resultedInCheck)

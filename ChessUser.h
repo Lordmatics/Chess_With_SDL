@@ -47,7 +47,11 @@ public:
 
 	virtual bool DetectChecks();
 
-	virtual Piece* MakeMove(SDL_Renderer* pRenderer) = 0;
+	virtual Piece* MakeMove(SDL_Renderer* pRenderer, Tile& tileOnRelease) = 0;
+
+	const bool IsMyTurn() const { return m_bMyTurn; }
+	void SetMyTurn(bool val) { m_bMyTurn = val; }
+	void Process(float dt, const SDL_Point& mousePos);
 protected:
 
 	Side m_side;
@@ -58,6 +62,11 @@ protected:
 	bool m_bIsInCheck;
 	bool m_bCheckMated;
 	bool m_bStaleMated;
+	bool m_bMyTurn;
+
+	Piece* m_pSelectedPiece;
+	Tile* m_pSelectedPiecesStartingTile;
+	SDL_Rect m_restRect;
 };
 
 template<class Function>

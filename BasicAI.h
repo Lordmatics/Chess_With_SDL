@@ -21,7 +21,7 @@ public:
 		SuperGM = 1 << 4
 	};
 
-	Piece* MakeMove(SDL_Renderer* pRenderer) override;
+	Piece* MakeMove(SDL_Renderer* pRenderer, Tile& tileOnRelease) override;
 
 	AIFlags GetAILevel() const { return m_aiSetting; }
 

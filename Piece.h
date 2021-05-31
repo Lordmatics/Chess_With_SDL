@@ -1,6 +1,7 @@
 #pragma once
 #include "apiObject.h"
 #include <map>
+#include "PieceMoveHistory.h"
 
 class ChessUser;
 class Tile;
@@ -56,12 +57,25 @@ public:
 	void CheckEnpassant(const Tile& tile, Board& board);
 	void CheckCastling(const Tile& pTile, Board& m_board);
 	bool CanAtackCoord(const Coordinate& param1) const;
+	void OnPieceMoved(const Coordinate& newCoord);
 private:
 	ChessUser* m_pOwner;
+	// Might even change this to store each move, as it's history
+	// Need to know where we came from, in the event we want to undo the moves
+	Tile* m_pPrevTile;
+	PieceMoveHistory m_history;
 	uint32_t m_pieceflags;	
 	bool m_bSelected;
 	bool m_bCaptured;
 	bool m_bHasMoved;
+
+	// So Tile will contain the attacked list + anything beyond those obstructed tiles
+	// Idea being, we can quickly construct 'safe squares' to handle check better
+
+	// Essentially a list of every tile this piece can currently see
+	std::vector<Tile*> m_visibleTiles;
+	// Essentially a list of every tile this piece can currently ATTACK
+	std::vector<Tile*> m_attackedTiles;
 public:
 	int GetValue() const;
 	void Promote(SDL_Renderer* pRenderer);

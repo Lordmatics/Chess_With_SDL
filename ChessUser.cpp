@@ -3,7 +3,12 @@
 #include "SDL_render.h"
 #include "Board.h"
 
-ChessUser::ChessUser()
+ChessUser::ChessUser() :
+	m_bIsWhite(false),
+	m_bIsInCheck(false),
+	m_bCheckMated(false),
+	m_bStaleMated(false),
+	m_bMyTurn(false)
 {
 
 }
@@ -80,6 +85,14 @@ void ChessUser::Render(SDL_Renderer* pRenderer)
 	{
 		std::cout << "Chess User: Failed To Render - Missing Renderer!" << std::endl;
 		return;
+	}
+
+	if (IsMyTurn())
+	{
+		if (Piece* pSelectedPiece = m_pSelectedPiece)
+		{
+			pSelectedPiece->RenderAsSelected(pRenderer);
+		}
 	}
 
 	//for (int i = 0; i < 2; i++)
@@ -315,4 +328,14 @@ bool ChessUser::DetectChecks()
 		}
 	}
 	return false;
+}
+
+void ChessUser::Process(float dt, const SDL_Point& mousePos)
+{
+	if (Piece* pSelectedPiece = m_pSelectedPiece)
+	{
+		SDL_Rect& transform = pSelectedPiece->GetTransform();
+		transform.x = mousePos.x - (transform.w / 2);
+		transform.y = mousePos.y - (transform.h / 2);
+	}
 }
