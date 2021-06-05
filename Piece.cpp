@@ -672,6 +672,11 @@ void Piece::UpdateAttackedTiles(const std::vector<Tile*>& attackedTiles)
 	m_attackedTiles = attackedTiles;
 }
 
+void Piece::UpdateCheckedTiles(const std::vector<Tile*>& checkedTiles)
+{
+	m_checkedTiles = checkedTiles;
+}
+
 void Piece::ClearAttackedTiles()
 {
 	m_attackedTiles.clear();
@@ -688,7 +693,7 @@ bool Piece::IsEnemy(uint32_t param1) const
 	return false;
 }
 
-const std::string Piece::GetInfo()
+const std::string& Piece::GetInfo()
 {
 	const char* pieceName = GetPieceName();
 	const char* pieceColour = GetFlags() & (uint32_t)Piece::PieceFlag::White ? "W" : "B";

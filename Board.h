@@ -109,6 +109,10 @@ private:
 	Piece* IsPiecePinned(const Piece& selectedObject);
 
 	
+	bool IsInCheck(const Piece& selectedObject, std::vector<Tile*>& checkers);
+	void GenerateCheckList(Piece& pSelectedObject, const std::vector<Tile*>& checkers);
+
+	std::map<Tile*, std::vector<Tile*>> m_checkedMapInterception;
 	//void ClearInput();
 public:
 	void RunAI(SDL_Renderer* pRenderer, bool& m_playersTurn);

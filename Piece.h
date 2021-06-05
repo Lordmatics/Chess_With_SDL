@@ -64,12 +64,14 @@ public:
 	void OnPieceMoved(const Coordinate& newCoord, bool resultedInCapture, int turn);
 	void UpdateVisibileTiles(const std::vector<Tile*>& queryTiles);
 	void UpdateAttackedTiles(const std::vector<Tile*>& attackedTiles);
+	void UpdateCheckedTiles(const std::vector<Tile*>& checkedTiles);
 	void ClearAttackedTiles();
 	bool IsEnemy(uint32_t param1) const;
-	const std::string GetInfo();
+	const std::string& GetInfo();
 
 	const std::vector<Tile*>& GetVisibleTiles() const { return m_visibleTiles; }
 	const std::vector<Tile*>& GetAttackedTiles() const { return m_attackedTiles; }
+	const std::vector<Tile*>& GetCheckingList() const { return m_checkedTiles; }
 
 	ChessUser* GetOwner() const { return m_pOwner; }
 	bool IsPinning(const Piece& selectedObject, int& numUntilKing);
@@ -90,6 +92,8 @@ private:
 	std::vector<Tile*> m_visibleTiles;
 	// Essentially a list of every tile this piece can currently ATTACK
 	std::vector<Tile*> m_attackedTiles;
+	// Essentially a list of every tile this piece can attack in the direction of the check we're creating
+	std::vector<Tile*> m_checkedTiles;
 
 	std::string m_pieceInfo;
 public:

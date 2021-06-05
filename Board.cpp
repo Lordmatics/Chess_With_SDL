@@ -118,6 +118,13 @@ void Board::GenerateLegalMoves(Piece* pSelectedObject)
 		return;
 	}
 
+	if (Piece* pPinner = IsPiecePinned(*pSelectedObject))
+	{
+		// TODO: Allow capture on the pinner as a move.
+		pSelectedObject->ClearAttackedTiles();
+		return;
+	}
+
 	int x = 0;
 	int y = 0;
 	int indexFound = 0;
@@ -155,23 +162,136 @@ void Board::GenerateLegalMoves(Piece* pSelectedObject)
 		GenerateLegalQueenMoves(*pSelectedObject);
 	}
 
+	if (m_validTiles.size() <= 0)
+	{
+		// Small optimisation
+		// If Piece is already boxed in and cannot move, don't calculate any further
+		return;
+	}
+
+	std::vector<Tile*> checkers;
+	if (IsInCheck(*pSelectedObject, checkers))
+	{
+		GenerateCheckList(*pSelectedObject, checkers);
+
+		//std::vector<Tile*> newValidTiles;
+		//std::vector<Tile*> potentiallyValidTiles;
+		//const bool isKing = flags & (uint32_t)Piece::PieceFlag::King;
+		//const int numberOfCheckers = (const int)checkers.size();
+		//for (Tile* pTile : checkers)
+		//{
+		//	if (Piece* pAttacker = pTile->GetPiece())
+		//	{
+		//		for (Tile* pCurrentValidTile : m_validTiles)
+		//		{
+		//			// Iterate over our current acceptable moves
+		//			// And essentially discard them unless they capture the attacker (1 checker)
+		//			// OR
+		//			// They manage to intercept the checkers attack (varies on num of attackers)
+
+		//			// First Remove all moves that exist in the attackers line of sight
+		//			const std::vector<Tile*>& attackingList = pAttacker->GetAttackedTiles();
+		//			bool matchFound = false;
+		//			for (Tile* pUnderAttackTile : attackingList)
+		//			{
+		//				if (pCurrentValidTile == pUnderAttackTile)
+		//				{
+		//					if (isKing)
+		//					{
+		//						matchFound = true;
+		//						break;
+		//					}
+		//					else
+		//					{
+		//						// Move to this tile - Intercepts check - Allowed
+		//						if (numberOfCheckers == 1)
+		//						{
+		//							newValidTiles.push_back(pCurrentValidTile);
+		//						}
+		//						else
+		//						{
+		//							// If we have more than one attacker creating check
+		//							// Store this move for later - it might be valid - needs to pass test against all checkers, at blocking their line of sight on the king
+		//							// Ensure no duplicates
+		//							bool add = true;
+		//							for (Tile* pPotentials : potentiallyValidTiles)
+		//							{
+		//								if (pPotentials == pCurrentValidTile)
+		//								{
+		//									add = false; 
+		//									break;
+		//								}
+		//							}
+		//							if(add)
+		//								potentiallyValidTiles.push_back(pCurrentValidTile);
+		//						}
+		//					}							
+		//				}
+		//			}
+		//			if (!matchFound)
+		//			{
+		//				// Move escapes check - allowed
+		//				newValidTiles.push_back(pCurrentValidTile);
+		//			}
+		//		}
+		//	}
+		//}
+		//if (numberOfCheckers > 1)
+		//{
+		//	int matchFound = 0;
+		//	for (Tile* pPotentials : potentiallyValidTiles)
+		//	{
+		//		// Check if the move is in both attackers attacking lists
+		//		for (Tile* pTile : checkers)
+		//		{
+		//			if (Piece* pAttacker = pTile->GetPiece())
+		//			{
+		//				const std::vector<Tile*>& attackingList = pAttacker->GetAttackedTiles();
+		//				for (Tile* pAttackedTile : attackingList)
+		//				{
+		//					if (pPotentials == pAttackedTile)
+		//					{
+		//						matchFound++;
+		//						break;
+		//					}
+		//				}
+		//			}
+		//		}
+		//		// If it was a spot in both their attacking line of sights
+		//		// It's valid, as it blocks both checks
+		//		if (matchFound == numberOfCheckers)
+		//		{
+		//			newValidTiles.push_back(pPotentials);
+		//		}
+		//	}
+		//}
+		//// Overwrite valid moves - now that CHECK rules has been applied
+		//m_validTiles = newValidTiles;
+	}
+	else
+	{
+		m_checkedMapInterception.clear();
+	}
+
+	
 	// Validate Move
 	// If as a result of this move, you would unleash a discovered Check...
 	// Remove it from the valid tiles
 	// So essentially, determine if we are pinned - then we cannot move anywhere, EXCEPT (maybe) a capture on the pinner
 	pSelectedObject->UpdateVisibileTiles(m_queryingTiles);
 	// NOTE: Can perhaps do this before evaluating this pieces moves altogether
-	if (Piece* pPinner = IsPiecePinned(*pSelectedObject))
-	{
-		// For Now, disallow movement from this piece		
-		m_validTiles.clear(); // NOTE: This clear may be unnecessary
-		pSelectedObject->ClearAttackedTiles();
-	}
-	else
-	{
-		pSelectedObject->UpdateAttackedTiles(m_validTiles);
-	}
-
+	//if (Piece* pPinner = IsPiecePinned(*pSelectedObject))
+	//{
+	//	// For Now, disallow movement from this piece		
+	//	m_validTiles.clear(); // NOTE: This clear may be unnecessary
+	//	pSelectedObject->ClearAttackedTiles();
+	//}
+	//else
+	//{
+	//	pSelectedObject->UpdateAttackedTiles(m_validTiles);
+	//}
+	pSelectedObject->UpdateAttackedTiles(m_validTiles);
+	return;
 
 	const bool playerIsWhite = m_player.IsWhite();
 	const bool aiIsWhite = m_opponent.IsWhite();
@@ -910,7 +1030,7 @@ void Board::GenerateLegalBishopMoves(Piece& selectedPiece)
 			}
 		}
 		CheckBishop(bObstructed, diagonalCoord, rule);
-	}
+	}	
 }
 
 void Board::GenerateLegalRookMoves(Piece& selectedPiece)
@@ -1368,6 +1488,305 @@ Piece* Board::IsPiecePinned(const Piece& selectedObject)
 		}
 	}
 	return nullptr;
+}
+
+bool Board::IsInCheck(const Piece& selectedObject, std::vector<Tile*>& checkers)
+{
+	// If we are in check...
+	// Discard any move that doesn't either
+	// 1) block the check
+	// 2) Capture the checking piece (this case is only valid if we are only in check by one piece)
+	Coordinate attackerCoord;
+	Coordinate kingCoord;
+	for (int i = 0; i < 2; i++)
+	{
+		if (ChessUser* pUser = m_players[i])
+		{
+			if (pUser != selectedObject.GetOwner())
+			{
+				Piece* pieces = pUser->GetPieces();
+				for (int j = 0; j < 16; j++)
+				{
+					Piece& piece = pieces[j];
+					if (piece.IsCaptured())
+						continue;
+
+					const std::vector<Tile*>& attackingList = piece.GetAttackedTiles();
+					for (Tile* pTile : attackingList)
+					{
+						if (!pTile)
+							continue;
+
+						if (pTile->GetFlags() & (uint32_t)Piece::PieceFlag::King)
+						{
+							// An enemy piece, can currently capture our king, this is bad..
+							const int tileID = piece.GetTileIDFromCoord();							
+							if (Tile* pAttackersTile = GetTile(tileID))
+							{
+								attackerCoord = pAttackersTile->GetCoordinate();
+								kingCoord = pTile->GetCoordinate();
+								// Generate Inbetween tiles
+								std::vector<Tile*> inbetweenTiles;
+								int xDiff = attackerCoord.m_x - kingCoord.m_x;
+								int absXDiff = xDiff;
+								if (xDiff < 0)
+								{
+									absXDiff *= -1;
+								}
+								int yDiff = attackerCoord.m_y - kingCoord.m_y;
+								int absYDiff = yDiff;
+								if (yDiff < 0)
+								{
+									absYDiff *= -1;
+								}
+								inbetweenTiles.push_back(pAttackersTile);												
+								// Deduce COORD Rule Based on positions
+								Coordinate rules[8] =
+								{
+									{1,0},
+									{1, 1},
+									{1, -1},
+									{0, 1},
+									{0, -1},
+									{-1, 0},
+									{-1, 1},
+									{ -1, -1}
+								};
+								
+								int ruleID = -1;								
+								if (xDiff < 0)
+								{
+
+									// ADD X
+
+									// King is on our right
+									if (yDiff < 0)
+									{
+										// King is below us
+										ruleID = 1; // SE
+									}
+									else if (yDiff == 0)
+									{
+										// King is adjacent to us
+										ruleID = 0; // E
+									}
+									else
+									{
+										// King is above us
+										ruleID = 2; // NE
+									}
+								}
+								else if (xDiff == 0)
+								{
+									// King is vertical with us
+									if (yDiff < 0)
+									{
+										// King is below us
+										ruleID = 3;
+
+									}
+									else
+									{
+										// King is above us
+										ruleID = 4;
+									}
+								}
+								else
+								{
+									// King is on our left
+									if (yDiff < 0)
+									{
+										// King is below us
+										ruleID = 6;
+
+									}
+									else if (yDiff == 0)
+									{
+										// King is adjacent to us+
+										ruleID = 5;
+									}
+									else
+									{
+										// King is above us
+										ruleID = 7;
+									}
+								}
+
+								bool kingNotFound = true;
+								int counter = 1;
+								while (kingNotFound)
+								{
+									Coordinate inBetweenCoord = attackerCoord + (rules[ruleID] * counter++);
+									const int inbetweenTileID = GetTileIDFromCoord(inBetweenCoord);
+									if (Tile* pInbetweenTile = GetTile(inbetweenTileID))
+									{
+										if (inBetweenCoord == kingCoord)
+										{
+											kingNotFound = false;
+											break;
+										}
+										inbetweenTiles.push_back(pInbetweenTile);
+									}
+								};
+
+								m_checkedMapInterception.emplace(pAttackersTile, inbetweenTiles);								
+								checkers.push_back(pAttackersTile);
+							}
+						}
+					}
+				}
+				return checkers.size() > 0;
+			}
+		}
+	}
+	return false;
+}
+
+void Board::GenerateCheckList(Piece& selectedObject, const std::vector<Tile*>& checkers)
+{
+	
+	// Generate list of tiles from the attacking list, that contribute to causing a check
+	m_checkedTiles.clear();
+
+	std::vector<Tile*> newValidTiles;
+	std::vector<Tile*> potentiallyValidTiles;
+	uint32_t flags = selectedObject.GetFlags();
+	const bool isKing = flags & (uint32_t)Piece::PieceFlag::King;
+	const int numberOfCheckers = (const int)checkers.size();
+	for (Tile* pChecker : checkers)
+	{
+		const std::vector<Tile*>& validMovement = m_validTiles;// selectedObject.GetAttackedTiles();
+		const std::vector<Tile*>& checkedTilesForAttacker = m_checkedMapInterception[pChecker];
+			
+		for (Tile* pValidMove : validMovement)
+		{
+			bool addForKing = true;
+			for (Tile* pCheckedTile : checkedTilesForAttacker)
+			{
+				// So this list represents all the in between tiles between the attacker and the king
+			
+				// Checked Tile List, includes Attacker
+				// Valid Move List includes Captures	
+				
+				if (pValidMove == pCheckedTile)
+				{
+					if (isKing)
+					{
+						// Don't Allow King to block check - Not Legal
+						addForKing = false;
+						break;
+					}
+					else
+					{
+						// Move to this tile - Intercepts check - Allowed
+						if (numberOfCheckers == 1)
+						{
+							newValidTiles.push_back(pValidMove);
+						}
+						else
+						{
+							// If we have more than one attacker creating check
+							// Store this move for later - it might be valid - needs to pass test against all checkers, at blocking their line of sight on the king
+							// Ensure no duplicates
+							bool add = true;
+							for (Tile* pPotentials : potentiallyValidTiles)
+							{
+								if (pPotentials == pValidMove)
+								{
+									add = false;
+									break;
+								}
+							}
+							if (add)
+								potentiallyValidTiles.push_back(pValidMove);
+						}
+					}
+				}
+				else
+				{
+					addForKing = false;
+				}
+				if (isKing && addForKing)
+				{
+					if (numberOfCheckers == 1)
+					{
+						newValidTiles.push_back(pValidMove);
+					}
+					else
+					{
+						// Ensure Unique - Check aginst ALL Checkers after
+						bool add = true;
+						for (Tile* pPotentials : potentiallyValidTiles)
+						{
+							if (pPotentials == pValidMove)
+							{
+								add = false;
+								break;
+							}
+						}
+						if (add)
+							potentiallyValidTiles.push_back(pValidMove);
+					}
+				}
+			}
+		}
+	}
+	if (numberOfCheckers > 1)
+	{
+		int matchFound = 0;
+		for (Tile* pPotentials : potentiallyValidTiles)
+		{
+			bool dontAddForKing = false;
+			// Check if the move is in both attackers attacking lists
+			for (Tile* pTile : checkers)
+			{
+				const std::vector<Tile*>& checkedTilesForAttacker = m_checkedMapInterception[pTile];
+
+				for (Tile* pAttackedTile : checkedTilesForAttacker)
+				{
+					if (isKing)
+					{
+						// For King its the opposite, ensure move is not in ANY attacking list
+						if (pPotentials == pAttackedTile)
+						{
+							dontAddForKing = true;
+							break;
+						}
+					}
+					else
+					{
+						if (pPotentials == pAttackedTile)
+						{
+							matchFound++;
+							break;
+						}
+					}
+				}
+				// If it was in one of the lists, don't bother checking anymore
+				if(dontAddForKing)
+					break;
+			}
+			if (isKing)
+			{
+				if (!dontAddForKing)
+				{
+					// If False at this point, we escaped their LOS
+					newValidTiles.push_back(pPotentials);
+				}
+			}
+			else
+			{
+				// If it was a spot in both their attacking line of sights
+				// It's valid, as it blocks both checks
+				if (matchFound == numberOfCheckers)
+				{
+					newValidTiles.push_back(pPotentials);
+				}
+			}
+		}
+	}
+	// Overwrite valid moves - now that CHECK rules has been applied
+	m_validTiles = newValidTiles;
 }
 
 //void Board::ClearInput()
