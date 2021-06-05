@@ -105,10 +105,13 @@ Piece* Board::GetPieceAtPoint(SDL_Point* point, int startIndex)
 
 void Board::GenerateLegalMoves(Piece* pSelectedObject)
 {
-	if (!m_queryingTiles.empty())
-	{
-		return;
-	}
+	//if (!m_queryingTiles.empty())
+	//{
+	//	return;
+	//}
+
+	m_queryingTiles.clear();
+	m_validTiles.clear();
 
 	if (!pSelectedObject)
 	{
@@ -150,6 +153,23 @@ void Board::GenerateLegalMoves(Piece* pSelectedObject)
 	else if (flags & (uint32_t)Piece::PieceFlag::Queen)
 	{
 		GenerateLegalQueenMoves(*pSelectedObject);
+	}
+
+	// Validate Move
+	// If as a result of this move, you would unleash a discovered Check...
+	// Remove it from the valid tiles
+	// So essentially, determine if we are pinned - then we cannot move anywhere, EXCEPT (maybe) a capture on the pinner
+	pSelectedObject->UpdateVisibileTiles(m_queryingTiles);
+	// NOTE: Can perhaps do this before evaluating this pieces moves altogether
+	if (Piece* pPinner = IsPiecePinned(*pSelectedObject))
+	{
+		// For Now, disallow movement from this piece		
+		m_validTiles.clear(); // NOTE: This clear may be unnecessary
+		pSelectedObject->ClearAttackedTiles();
+	}
+	else
+	{
+		pSelectedObject->UpdateAttackedTiles(m_validTiles);
 	}
 
 
@@ -238,43 +258,6 @@ void Board::GenerateLegalMoves(Piece* pSelectedObject)
 	{
 
 	}
-}
-
-void Board::RenderLegalMoves(SDL_Renderer* pRenderer)
-{
-	// TODO: Filter Query Tiles for Actual Tiles
-	// Query Tiles encompass ALL Possible moves without restriction
-
-	const bool actual = true;
-	std::vector<Tile*>& tiles = actual ? m_validTiles : m_queryingTiles;
-	for (Tile* tile : m_validTiles)
-	{
-		if (tile)
-		{
-			tile->RenderLegalHighlight(pRenderer);
-		}
-	}
-}
-
-void Board::ClearLegalMoves()
-{
-	for (Tile* tile : m_queryingTiles)
-	{
-		if (tile)
-		{
-			tile->ResetLegalHighlight();
-		}
-	}
-	m_queryingTiles.clear();
-
-	for (Tile* tile : m_validTiles)
-	{
-		if (tile)
-		{
-			tile->ResetLegalHighlight();
-		}
-	}
-	m_validTiles.clear();
 }
 
 Board::Board()
@@ -372,7 +355,12 @@ void Board::Render(SDL_Renderer* pRenderer)
 		tile.Render(pRenderer);
 	}
 
-	RenderLegalMoves(pRenderer);
+	//RenderLegalMoves(pRenderer);
+
+	for (Tile* pTile : m_highlightTiles)
+	{
+		pTile->RenderLegalHighlight(pRenderer);
+	}
 
 	for (int i = 0; i < 2 ; i++)
 	{
@@ -541,7 +529,6 @@ void Board::GenerateLegalPawnMoves(Piece& pSelectedPiece)
 		int id = GetTileIDFromCoord(valiCoords[i].m_coord);
 		m_queryingTiles.push_back(&m_board[id]);
 	}
-
 
 	for (Tile* pQuery : m_queryingTiles)
 	{
@@ -797,6 +784,7 @@ void Board::GenerateLegalBishopMoves(Piece& selectedPiece)
 	Coordinate pieceCoord = selectedPiece.GetCoordinate();
 	auto CheckBishop = [&](bool& bObstructed, Coordinate diagonalCoord, Coordinate rule)
 	{
+		bool hitFirstPiece = false;
 		while (!bObstructed)
 		{
 			int TileID = GetTileIDFromCoord(diagonalCoord);
@@ -836,12 +824,22 @@ void Board::GenerateLegalBishopMoves(Piece& selectedPiece)
 					}
 					else
 					{
-						m_validTiles.push_back(pTile);
-						break;
+						if (!hitFirstPiece)
+						{
+							m_queryingTiles.push_back(pTile);
+							m_validTiles.push_back(pTile);
+							hitFirstPiece = true;
+						}
+						else
+						{
+							m_queryingTiles.push_back(pTile);
+						}
+						diagonalCoord += rule;
+						//break;
 					}
 						
-					bObstructed = true;
-					break;
+					//bObstructed = true;
+					//break;
 				}
 				else
 				{
@@ -1016,12 +1014,12 @@ const std::vector<Tile*>& Board::GetValidTiles() const
 
 void Board::Test()
 {
-	volatile int i = 5;
-	auto a = m_queryingTiles;
+	//volatile int i = 5;
+	//auto a = m_queryingTiles;
 
-	auto b = m_validTiles;
+	//auto b = m_validTiles;
 
-	volatile int j = 6;
+	//volatile int j = 6;
 
 }
 
@@ -1249,22 +1247,133 @@ bool Board::IsTileDefended(Tile& pTile, bool attackerIsWhite)
 	}
 }
 
-void Board::ClearInput()
+void Board::UpdatePieces()
 {
-	ClearLegalMoves();
+	
+	std::cout << "Board::UpdatePieces: Turn: " << m_iTurn << std::endl;
 
-	m_pSelectedRect = nullptr;
-
-	if (Piece* pSelected = m_pSelectedPiece)
+	for (ChessUser* pUser : m_players)
 	{
-		pSelected->SetSelected(false);
-		m_pSelectedPiece = nullptr;
+		Piece* pPieces = pUser->GetPieces();
+		for (int i = 0; i < 16 ; i++)
+		{
+			Piece& currentPiece = pPieces[i];
+			const bool isCaptured = currentPiece.IsCaptured();
+			if (isCaptured)
+			{
+				continue;
+			}
+			GenerateLegalMoves(&currentPiece);
+
+			// Output to console some useful information
+			currentPiece.OnPieceUpdated();
+		}		 
 	}
-	if (Tile* pPiecesTile = m_pPiecesTile)
+	m_iTurn++;
+	std::cout << std::endl;
+}
+
+void Board::SetHighlightTiles(const std::vector<Tile *>& attacked)
+{
+	if (m_highlightTiles.empty())
 	{
-		m_pPiecesTile = nullptr;
+		m_highlightTiles = attacked;
 	}
 }
+
+void Board::UnhighlightTiles()
+{
+	for (Tile* pTile : m_highlightTiles)
+	{
+		pTile->ResetLegalHighlight();
+	}
+	m_highlightTiles.clear();
+}
+
+int Board::GetTurn() const
+{
+	return m_iTurn;
+}
+
+Piece* Board::IsPiecePinned(const Piece& selectedObject)
+{
+	if (ChessUser* pOwner = selectedObject.GetOwner())
+	{
+		Tile* pMyTile = GetTile(selectedObject.GetTileIDFromCoord());
+		if (!pMyTile)
+			return nullptr;
+
+		for (int i = 0; i < MAX_NUM_PLAYERS ; i++)
+		{
+			ChessUser* pUser = m_players[i];
+			if (pOwner != pUser)
+			{
+				// Check each piece pUser has, to see if it is currently pinning our selected object
+				Piece* pUserMaterial = pUser->GetPieces();
+				for (int j = 0; j < 16 ; j++)
+				{
+					Piece& piece = pUserMaterial[j];
+					if(piece.IsCaptured())
+						continue;
+
+					// Optimisation - Only Bishop/Rook/Queen can pin					
+					const bool isPinnerType = (piece.GetFlags() & (uint32_t)Piece::PieceFlag::Pinner);// == (uint32_t)Piece::PieceFlag::Pinner;
+					if(!isPinnerType)
+						continue;
+
+					// We're checking the enemies, Bishops / Rooks / Queens, determining if they are pinning us 'selectedObject'
+
+					const std::vector<Tile*>& attackedTiles = piece.GetAttackedTiles();
+					for (Tile* pAttackedTile : attackedTiles)
+					{
+						if(!pAttackedTile)
+							continue;
+
+						if (pAttackedTile == pMyTile)
+						{
+							// This attacker, can see ME!
+							// Determine if he's pinning me though							
+
+							const std::vector<Tile*>& visibleTiles = piece.GetVisibleTiles();
+							int numUntilKing = 0;
+							for (Tile* pVisibleTile : visibleTiles)
+							{
+								if (!pVisibleTile)
+									continue;
+
+								// Means more than 1 object is in between attacker and king
+								if (numUntilKing >= 2)
+									break;
+
+								if (Piece* pPiece = pVisibleTile->GetPiece())
+								{									
+									const bool isPinning = piece.IsPinning(*pPiece, numUntilKing);
+									if (isPinning)
+									{
+										// return attacker
+										return &piece;
+									}
+								}
+							}
+							// If we got here, it means this piece may be pinning in the near future, but not currently
+							// check the next piece.
+							break;
+						}
+					}				
+				}
+
+				// We only want to iterate over the enemies pieces
+				break;
+			}			
+		}
+	}
+	return nullptr;
+}
+
+//void Board::ClearInput()
+//{
+//	ClearLegalMoves();
+//}
 
 void Board::RunAI(SDL_Renderer* pRenderer, bool& m_playersTurn)
 {

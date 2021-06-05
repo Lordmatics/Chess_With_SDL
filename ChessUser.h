@@ -67,6 +67,8 @@ protected:
 	Piece* m_pSelectedPiece;
 	Tile* m_pSelectedPiecesStartingTile;
 	SDL_Rect m_restRect;
+public:
+	Piece* GetPieces();
 };
 
 template<class Function>

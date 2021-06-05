@@ -146,7 +146,9 @@
     <ClCompile Include="Piece.cpp" />
     <ClCompile Include="PieceMoveHistory.cpp" />
     <ClCompile Include="Player.cpp" />
+    <ClCompile Include="Singleton.cpp" />
     <ClCompile Include="Tile.cpp" />
+    <ClCompile Include="Utils.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="apiObject.h" />
@@ -159,7 +161,9 @@
     <ClInclude Include="Piece.h" />
     <ClInclude Include="PieceMoveHistory.h" />
     <ClInclude Include="Player.h" />
+    <ClInclude Include="Singleton.h" />
     <ClInclude Include="Tile.h" />
+    <ClInclude Include="Utils.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

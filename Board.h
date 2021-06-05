@@ -51,8 +51,6 @@ public:
 	Tile* GetTileAtPoint(SDL_Point* point, int startIndex = 0);
 	Piece* GetPieceAtPoint(SDL_Point* point, int startIndex = 0);
 	void GenerateLegalMoves(Piece* pSelectedObject);
-	void RenderLegalMoves(SDL_Renderer* pRenderer);
-	void ClearLegalMoves();
 
 	static std::map<Board::TileType, const char*> m_tileMap;
 	int GetTileIDFromCoord(const Coordinate& coord) const;
@@ -86,28 +84,32 @@ public:
 	const std::vector<Tile*>& GetCheckedTilesConst() { return m_checkedTiles; }
 	std::vector<Tile*>& GetCheckedTiles() { return m_checkedTiles; }
 	bool IsTileDefended(Tile& pTile, bool attackerIsWhite);
+	void UpdatePieces();
+	void SetHighlightTiles(const std::vector<Tile *>& attacked);
+	void UnhighlightTiles();
+	int GetTurn() const;
 private:
 	//Tile m_backgroundTiles[8][8];
 	Tile m_board[64]; // Generate the 32 pieces in here, and leave the rest of the tiles intiialised as NONE
 	std::vector<Tile*> m_queryingTiles;
 	std::vector<Tile*> m_validTiles;
 	std::vector<Tile*> m_checkedTiles;
+
+	std::vector<Tile*> m_highlightTiles;
 	Player m_player;
 	BasicAI m_opponent;
 	ChessUser* m_players[MAX_NUM_PLAYERS]; 
 	Piece* m_pPreviousMovedPiece;
 
-
 	bool m_bIgnorePress;
 	bool m_playersTurn;
 	SDL_Point m_mousePosition;
-	SDL_Rect* m_pSelectedRect;
-	SDL_Point m_clickOffset;
 
-	SDL_Rect m_resetPos;
-	Tile* m_pPiecesTile;
-	Piece* m_pSelectedPiece;
-	void ClearInput();
+	int m_iTurn;
+	Piece* IsPiecePinned(const Piece& selectedObject);
+
+	
+	//void ClearInput();
 public:
 	void RunAI(SDL_Renderer* pRenderer, bool& m_playersTurn);
 };

@@ -88,10 +88,22 @@ void ChessUser::Render(SDL_Renderer* pRenderer)
 	}
 
 	if (IsMyTurn())
-	{
+	{		
 		if (Piece* pSelectedPiece = m_pSelectedPiece)
-		{
-			pSelectedPiece->RenderAsSelected(pRenderer);
+		{			
+			const std::vector<Tile*>& attacked = pSelectedPiece->GetAttackedTiles();
+
+			m_pBoard->SetHighlightTiles(attacked);
+			//for (Tile* pTile : attacked)
+			//{
+			//	pTile->RenderLegalHighlight(pRenderer);
+			//}
+			//const int tileID = pSelectedPiece->GetTileIDFromCoord();
+			//if (Tile* pTile = m_pBoard->GetTile(tileID))
+			//{
+			//	pTile->RenderLegalHighlight(pRenderer);
+			//}
+			pSelectedPiece->RenderAsSelected(pRenderer);			
 		}
 	}
 
@@ -169,7 +181,7 @@ bool ChessUser::DetectChecks()
 			continue;
 
 		Coordinate pieceCoord = piece.GetCoordinate();
-		pBoard->ClearLegalMoves();
+		//pBoard->ClearLegalMoves();
 		pBoard->GenerateLegalMoves(&piece);
 
 		// IF CHECKED BY HORSE
@@ -338,4 +350,9 @@ void ChessUser::Process(float dt, const SDL_Point& mousePos)
 		transform.x = mousePos.x - (transform.w / 2);
 		transform.y = mousePos.y - (transform.h / 2);
 	}
+}
+
+Piece* ChessUser::GetPieces()
+{
+	return m_material;
 }

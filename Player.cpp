@@ -54,16 +54,19 @@ void Player::OnPieceSelected(Piece& selectedPiece)
 {
 	// Get Position of Piece BEFORE we move it
 	// So we can snap it back when we cancel the movement
+	
+	Board* pBoard = m_pBoard;
+	if (!pBoard)
+	{
+		return;
+	}
+	
 	m_restRect = selectedPiece.GetTransform();
-	selectedPiece.SetSelected(true);
+	selectedPiece.SetSelected(true, *pBoard);
 
 	if (IsMyTurn())
 	{
-		Board* pBoard = m_pBoard;
-		if (!pBoard)
-		{
-			return;
-		}
+
 
 		// This function will set a bunch of data on the selected piece
 		// So it can be aware of:
@@ -78,10 +81,16 @@ void Player::OnPieceSelected(Piece& selectedPiece)
 
 void Player::ClearSelection(bool snapToStart /*= true*/)
 {
+	Board* pBoard = m_pBoard;
+	if (!pBoard)
+	{
+		return;
+	}
+
 	// Undo Move
 	if (m_pSelectedPiece)
 	{
-		m_pSelectedPiece->SetSelected(false);
+		m_pSelectedPiece->SetSelected(false, *pBoard);
 		if (snapToStart)
 		{
 			SDL_Rect& transform = m_pSelectedPiece->GetTransform();
@@ -94,11 +103,6 @@ void Player::ClearSelection(bool snapToStart /*= true*/)
 	m_pSelectedPiecesStartingTile = nullptr;
 	m_restRect.x = 0;
 	m_restRect.y = 0;
-
-	if (m_pBoard)
-	{
-		m_pBoard->ClearLegalMoves();
-	}
 }
 
 Piece* Player::MakeMove(SDL_Renderer* pRenderer, Tile& tileOnRelease)
@@ -129,11 +133,13 @@ Piece* Player::MakeMove(SDL_Renderer* pRenderer, Tile& tileOnRelease)
 		{
 			const bool isAPawn = pSelectedPiece->GetFlags() & (uint32_t)Piece::PieceFlag::Pawn ? true : false;
 			const bool isAPromotionSquare = tileOnRelease.IsPromotionSquare();
+			bool resultedInCapture = false;
 			if (Piece* pDefender = tileOnRelease.GetPiece())
 			{
 				// If there is a piece on the tile
 				// Initiate CAPTURE
 				pDefender->SetCaptured(true);
+				resultedInCapture = true;
 				if (isAPawn && isAPromotionSquare)
 				{
 					// If we captured onto the back rank,
@@ -168,8 +174,9 @@ Piece* Player::MakeMove(SDL_Renderer* pRenderer, Tile& tileOnRelease)
 				m_pSelectedPiecesStartingTile = nullptr;
 			}
 			const Coordinate& releaseCoord = tileOnRelease.GetCoordinate();
-			pSelectedPiece->OnPieceMoved(releaseCoord);
+			pSelectedPiece->OnPieceMoved(releaseCoord, resultedInCapture, pBoard->GetTurn());
 			tileOnRelease.SetPiece(pSelectedPiece);
+			pBoard->UpdatePieces();
 			pBoard->SetPreviouslyMoved(pSelectedPiece);
 			ClearSelection(false);
 

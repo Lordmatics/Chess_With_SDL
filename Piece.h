@@ -1,7 +1,7 @@
 #pragma once
 #include "apiObject.h"
 #include <map>
-#include "PieceMoveHistory.h"
+#include <vector>
 
 class ChessUser;
 class Tile;
@@ -24,7 +24,9 @@ public:
 		Queen = (uint32_t)1 << 6,
 
 		White = (uint32_t)1 << 7,
-		Black = (uint32_t)1 << 8
+		Black = (uint32_t)1 << 8,
+
+		Pinner = Bishop | Rook | Queen
 
 	};
 
@@ -43,27 +45,39 @@ public:
 	bool RenderAsSelected(SDL_Renderer* pRenderer, bool internal = false);
 
 	void Init(SDL_Renderer* pRenderer, int i, int j, ChessUser* owner);
-	void SetSelected(bool val);
+	void SetSelected(bool val, Board& board);
 	bool IsSelected() const { return m_bSelected; }
-	bool CanCapture(Piece* pTargetPiece);
+	bool CanCapture(const Piece* pTargetPiece) const;
 
 	bool IsSouthPlaying() const;
 
 	bool IsCaptured() const { return m_bCaptured; }
-	void SetCaptured(bool val) { m_bCaptured = val; }
+	void SetCaptured(bool val);
 
 	void SetMoved(bool val) { m_bHasMoved = val; }
 	const bool HasMoved() const { return m_bHasMoved; }
 	void CheckEnpassant(const Tile& tile, Board& board);
 	void CheckCastling(const Tile& pTile, Board& m_board);
 	bool CanAtackCoord(const Coordinate& param1) const;
-	void OnPieceMoved(const Coordinate& newCoord);
+	void OnPieceSelected();
+	void OnPieceUpdated();
+	void OnPieceMoved(const Coordinate& newCoord, bool resultedInCapture, int turn);
+	void UpdateVisibileTiles(const std::vector<Tile*>& queryTiles);
+	void UpdateAttackedTiles(const std::vector<Tile*>& attackedTiles);
+	void ClearAttackedTiles();
+	bool IsEnemy(uint32_t param1) const;
+	const std::string GetInfo();
+
+	const std::vector<Tile*>& GetVisibleTiles() const { return m_visibleTiles; }
+	const std::vector<Tile*>& GetAttackedTiles() const { return m_attackedTiles; }
+
+	ChessUser* GetOwner() const { return m_pOwner; }
+	bool IsPinning(const Piece& selectedObject, int& numUntilKing);
 private:
 	ChessUser* m_pOwner;
 	// Might even change this to store each move, as it's history
 	// Need to know where we came from, in the event we want to undo the moves
 	Tile* m_pPrevTile;
-	PieceMoveHistory m_history;
 	uint32_t m_pieceflags;	
 	bool m_bSelected;
 	bool m_bCaptured;
@@ -76,6 +90,8 @@ private:
 	std::vector<Tile*> m_visibleTiles;
 	// Essentially a list of every tile this piece can currently ATTACK
 	std::vector<Tile*> m_attackedTiles;
+
+	std::string m_pieceInfo;
 public:
 	int GetValue() const;
 	void Promote(SDL_Renderer* pRenderer);

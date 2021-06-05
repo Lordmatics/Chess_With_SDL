@@ -3,6 +3,8 @@
 #include "ChessUser.h"
 #include "Board.h"
 #include "SDL_render.h"
+#include "Utils.h"
+#include "PieceMoveHistory.h"
 
 std::map<Piece::PieceFlag, int> Piece::m_valueMap =
 {
@@ -113,7 +115,6 @@ void Piece::UpdatePosFromCoord()
 	int y = 0;
 	if (ChessUser* pOwner = m_pOwner)
 	{
-
 		const bool south = pOwner->GetSide() == ChessUser::Side::BOTTOM ? true : false;
 		int i = south ? m_boardCoordinate.m_y + 2 - 8 : m_boardCoordinate.m_y;
 		int j = m_boardCoordinate.m_x;
@@ -257,12 +258,26 @@ void Piece::Init(SDL_Renderer* pRenderer, int i, int j, ChessUser* pOwner)
 	UpdatePosFromCoord();
 }
 
-void Piece::SetSelected(bool val)
+void Piece::SetSelected(bool val, Board& board)
 {
 	m_bSelected = val;
+	if (val)
+	{
+		OnPieceSelected();
+	}
+	else
+	{
+		// clear selection highlight
+		board.UnhighlightTiles();
+		//const std::vector<Tile*>& attacked = GetAttackedTiles();
+		//for (Tile* pTile : attacked)
+		//{
+		//	pTile->ResetLegalHighlight();
+		//}
+	}
 }
 
-bool Piece::CanCapture(Piece* pTargetPiece)
+bool Piece::CanCapture(const Piece* pTargetPiece) const
 {
 	if (pTargetPiece)
 	{
@@ -318,6 +333,14 @@ bool Piece::IsSouthPlaying() const
 		return pOwner->GetSide() == ChessUser::BOTTOM;
 	}
 	return true;
+}
+
+void Piece::SetCaptured(bool val)
+{
+	m_bCaptured = val;
+	const char* chessUserName = Utils::GetChessUser(m_pOwner);	
+	const Coordinate& coord = GetCoordinate();
+	std::cout << chessUserName << "[Piece::SetCaptured] @ (" << coord.m_x << " , " << coord.m_y << ")" << std::endl;
 }
 
 void Piece::CheckEnpassant(const Tile& tileToCapture, Board& board)
@@ -383,6 +406,7 @@ void Piece::CheckEnpassant(const Tile& tileToCapture, Board& board)
 				{
 					// Destroy
 					pEnpassantTile->SetPiece(nullptr);
+					std::cout << "Enpassant Capture!!! - ";
 					pEnpassantPiece->SetCaptured(true);
 				}
 			}
@@ -441,6 +465,7 @@ void Piece::CheckCastling(const Tile& pTile, Board& m_board)
 					{
 						pDestinationTile->SetPiece(pRook);
 					}
+					std::cout << "Castled - Rook From (" << rookCoord.m_x << " , " << rookCoord.m_y << ") to (" << targetRookX << " , " << temp2.m_y << ")" << std::endl;
 				}
 			}
 		}
@@ -547,23 +572,151 @@ bool Piece::CanAtackCoord(const Coordinate& target) const
 	return false;
 }
 
-void Piece::OnPieceMoved(const Coordinate& newCoord)
+void Piece::OnPieceSelected()
 {
-	const Coordinate& prevCoord = GetCoordinate();
-	SetCoord(newCoord);
-	UpdatePosFromCoord();
 
+}
+
+void Piece::OnPieceUpdated()
+{
+	int numUntilKing = 0;
+	for (Tile* pTile : m_visibleTiles)
+	{
+		if (!pTile)
+			continue;
+
+		if (Piece* pPiece = pTile->GetPiece())
+		{
+			const bool isPinning = IsPinning(*pPiece, numUntilKing);
+			if (isPinning)
+			{
+				std::cout << "King IS Pinned" << std::endl;
+			}
+			//if (pPiece->IsEnemy(GetFlags()))
+			//{
+			//	if (pPiece->GetFlags() & (uint32_t)Piece::PieceFlag::King)
+			//	{
+			//		if (numUntilKing == 1 && CanCapture(pPiece))
+			//		{
+			//			std::cout << "King IS Pinned" << std::endl;
+			//		}
+			//	}
+			//	
+			//	if(logVisibility)
+			//		std::cout << GetInfo() << " - I can See: " << pPiece->GetInfo() << std::endl;
+
+			//	numUntilKing++;
+			//}
+		}
+	}
+
+	for (Tile* pTile : m_attackedTiles)
+	{
+		if(!pTile)
+			continue;
+
+		if (Piece* pPiece = pTile->GetPiece())
+		{
+			if (pPiece->IsEnemy(GetFlags()))
+			{
+				std::cout << GetInfo() << " - I can Attack: " << pPiece->GetInfo() << std::endl;
+
+				if (pPiece->GetFlags() & (uint32_t)Piece::PieceFlag::King)
+				{					
+					std::cout << "Enemy King IS in check!" << std::endl;					
+				}
+			}
+		}
+	}
+}
+
+void Piece::OnPieceMoved(const Coordinate& newCoord, bool resultedInCapture, int turn)
+{
+	const Coordinate prevCoord = GetCoordinate();
+	const char* pieceColour = GetFlags() & (uint32_t)Piece::PieceFlag::White ? "W" : "B";
 	if (ChessUser* pOwner = m_pOwner)
 	{
 		if (Player* pPlayer = dynamic_cast<Player*>(pOwner))
 		{
-			std::cout << "[Player] OnPieceMoved: " << GetPieceName() << "(" << prevCoord.m_x << " , " << prevCoord.m_y << ") --> (" << newCoord.m_x << " , " << newCoord.m_y << ")" << std::endl;
+			std::cout << "[Player] OnPieceMoved: " << GetPieceName() << " " << pieceColour << " (" << prevCoord.m_x << " , " << prevCoord.m_y << ") --> (" << newCoord.m_x << " , " << newCoord.m_y << ")" << std::endl;
 		}
 		else if (BasicAI* pPlayer = dynamic_cast<BasicAI*>(pOwner))
 		{
-			std::cout << "[AI] OnPieceMoved: " << GetPieceName() << "(" << prevCoord.m_x << " , " << prevCoord.m_y << ") --> (" << newCoord.m_x << " , " << newCoord.m_y << ")" << std::endl;
+			std::cout << "[AI] OnPieceMoved: " << GetPieceName() << " " << pieceColour << " (" << prevCoord.m_x << " , " << prevCoord.m_y << ") --> (" << newCoord.m_x << " , " << newCoord.m_y << ")" << std::endl;
 		}
 	}
+	SetCoord(newCoord);
+	UpdatePosFromCoord();
+
+	// Regenerate Lists	
+
+	//TODO: Improve Capture Data
+	PieceMoveHistory& history = PieceMoveHistory::GetInstance();
+	PieceMoveData data;
+	data.m_previousTile = prevCoord;
+	data.m_targetTile = newCoord;
+	data.m_pieceName = GetPieceName();
+	data.m_pieceColour = pieceColour;
+	data.m_resultedInCapture = resultedInCapture;
+	data.m_turn = turn;
+	history.AddMoveData(data);
+}
+
+void Piece::UpdateVisibileTiles(const std::vector<Tile*>& queryTiles)
+{
+	m_visibleTiles = queryTiles;
+}
+
+void Piece::UpdateAttackedTiles(const std::vector<Tile*>& attackedTiles)
+{
+	m_attackedTiles = attackedTiles;
+}
+
+void Piece::ClearAttackedTiles()
+{
+	m_attackedTiles.clear();
+}
+
+bool Piece::IsEnemy(uint32_t param1) const
+{
+	const bool attackerColour = param1 & (uint32_t)Piece::PieceFlag::White;
+	const bool victimColour = GetFlags() & (uint32_t)Piece::PieceFlag::White;
+	if (attackerColour != victimColour)
+	{
+		return true;
+	}
+	return false;
+}
+
+const std::string Piece::GetInfo()
+{
+	const char* pieceName = GetPieceName();
+	const char* pieceColour = GetFlags() & (uint32_t)Piece::PieceFlag::White ? "W" : "B";
+	const Coordinate& position = GetCoordinate();
+	std::string info;
+	info.append(pieceName);
+	const char* unformatted = " [%s] @ (%d , %d)";
+	const std::string& formatted = Utils::FormatString(unformatted,pieceColour, position.m_x, position.m_y);
+	info.append(formatted.c_str());
+	//info.append(std::format("@ ({} , {})", position.m_x, position.m_y)); // C++ 20 only
+	m_pieceInfo = info;
+	return m_pieceInfo;
+}
+
+bool Piece::IsPinning(const Piece& target, int& numUntilKing)
+{
+	if (target.IsEnemy(GetFlags()))
+	{
+		if (target.GetFlags() & (uint32_t)Piece::PieceFlag::King)
+		{
+			if (numUntilKing == 1 && CanCapture(&target))
+			{					
+				return true;
+			}
+		}
+	}
+	numUntilKing++;
+	return false;
 }
 
 //const bool Piece::HasMoved() const

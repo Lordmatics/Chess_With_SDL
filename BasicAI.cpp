@@ -53,7 +53,7 @@ Piece* BasicAI::MakeMove(SDL_Renderer* pRenderer, Tile& tileOnRelease)
 				if(piece.IsCaptured())
 					continue;
 
-				pBoard->ClearLegalMoves();
+				//pBoard->ClearLegalMoves();
 				pBoard->GenerateLegalMoves(&piece);
 
 				const std::vector<Tile*> validTiles = pBoard->GetValidTiles();
@@ -209,7 +209,7 @@ Piece* BasicAI::MakeMove(SDL_Renderer* pRenderer, Tile& tileOnRelease)
 				}
 
 				//pBoard->
-				pBoard->ClearLegalMoves();
+				//pBoard->ClearLegalMoves();
 				return pPieceToPlay;				
 			}
 			else
