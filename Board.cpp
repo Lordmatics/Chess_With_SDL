@@ -118,11 +118,14 @@ void Board::GenerateLegalMoves(Piece* pSelectedObject)
 		return;
 	}
 
-	if (Piece* pPinner = IsPiecePinned(*pSelectedObject))
+	bool bPinned = false;
+	Piece* pPinner = IsPiecePinned(*pSelectedObject);
+	if(pPinner)
 	{
+		bPinned = true;
 		// TODO: Allow capture on the pinner as a move.
-		pSelectedObject->ClearAttackedTiles();
-		return;
+		//pSelectedObject->ClearAttackedTiles();
+		//return;
 	}
 
 	int x = 0;
@@ -271,6 +274,71 @@ void Board::GenerateLegalMoves(Piece* pSelectedObject)
 	else
 	{
 		m_checkedMapInterception.clear();
+
+		if (bPinned)
+		{
+			Tile* pPinnerTile = GetTile(GetTileIDFromCoord(pPinner->GetCoordinate()));
+			// Determine new valid moves
+			// Basically only Capture is acceptable, unless we're double pinned in which case no moves are acceptable			
+			bool allowCapture = false;
+			for (Tile* pTile : m_validTiles)
+			{
+				if (pPinnerTile == pTile)
+				{
+					allowCapture = true;
+					break;
+				}
+			}
+			//pSelectedObject->ClearAttackedTiles();
+			m_validTiles.clear();
+			m_validTiles.push_back(pPinnerTile);
+		}
+
+		if (flags & (uint32_t)Piece::PieceFlag::King)
+		{
+			std::vector<Tile*> newValidMoves;
+			// Check we're not moving INTO check...
+			for (Tile* pValidMove : m_validTiles)
+			{
+				for (int i = 0; i < 2; i++)
+				{
+					if (ChessUser* pUser = m_players[i])
+					{
+						if (pUser != pSelectedObject->GetOwner())
+						{
+							Piece* pieces = pUser->GetPieces();
+							bool dontAdd = false;
+							for (int j = 0; j < 16; j++)
+							{
+								Piece& piece = pieces[j];
+								if (piece.IsCaptured())
+									continue;
+
+								const std::vector<Tile*>& attackingList = piece.GetAttackedTiles();
+								for (Tile* pTile : attackingList)
+								{
+									if (!pTile)
+										continue;
+
+									if (pTile == pValidMove)
+									{
+										dontAdd = true;
+										break;
+									}
+								}				
+								if (dontAdd)
+									break;
+							}
+							if (!dontAdd)
+							{
+								newValidMoves.push_back(pValidMove);
+							}
+						}
+					}
+				}
+			}
+			m_validTiles = newValidMoves;
+		}
 	}
 
 	
@@ -963,7 +1031,12 @@ void Board::GenerateLegalBishopMoves(Piece& selectedPiece)
 				}
 				else
 				{
-					m_validTiles.push_back(pTile);
+					if (!hitFirstPiece)
+					{
+						m_validTiles.push_back(pTile);
+					}
+					// Keep scanning in this direction for visibility
+					// But don't add targets BEYOND obstructions
 					diagonalCoord += rule;
 				}
 			}
