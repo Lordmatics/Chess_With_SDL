@@ -49,10 +49,12 @@ bool Board::CheckPiece(const Piece& selectedPiece, const Coordinate& coord)
 			}
 			else
 			{
+				m_queryingTiles.push_back(pTile);
 				m_validTiles.push_back(pTile);
 				return false;
 			}
 		}
+		m_queryingTiles.push_back(pTile);
 		m_validTiles.push_back(pTile);
 		return true;
 	}
@@ -339,9 +341,72 @@ void Board::GenerateLegalMoves(Piece* pSelectedObject)
 			}
 			m_validTiles = newValidMoves;
 		}
+		else
+		{
+			// Remove King from Movable Tile
+			std::vector<Tile*> newValidMoves;
+			// Check we're not moving INTO check...			
+			// Scan for enemy king - and remove from valid list if its in there
+			for (int i = 0; i < 2; i++)
+			{
+				if (ChessUser* pUser = m_players[i])
+				{
+					if (pUser != pSelectedObject->GetOwner())
+					{
+						Piece* pieces = pUser->GetPieces();
+						bool dontAdd = false;
+						static bool useDangerousLookup = true; // Faster but prone to error if piece arrangement changes
+						if (useDangerousLookup)
+						{
+							// B 4
+							// W 12
+							const int pieceID = pUser->IsWhite() ? 12 : 4;
+							Piece& piece = pieces[pieceID];
+							const Coordinate& kingPos = piece.GetCoordinate();
+							const int kingTileID = GetTileIDFromCoord(kingPos);
+							if (Tile* pKingTile = GetTile(kingTileID))
+							{
+								for (Tile* pValidMove : m_validTiles)
+								{
+									if (pValidMove != pKingTile)
+									{
+										newValidMoves.push_back(pValidMove);
+									}
+								}
+							}
+						}
+						else
+						{
+							for (int j = 0; j < 16; j++)
+							{
+								Piece& piece = pieces[j];
+								if (piece.IsCaptured())
+									continue;
+
+								if (piece.GetFlags() & (uint32_t)Piece::PieceFlag::King)
+								{
+									const Coordinate& kingPos = piece.GetCoordinate();
+									const int kingTileID = GetTileIDFromCoord(kingPos);
+									if (Tile* pKingTile = GetTile(kingTileID))
+									{
+										for (Tile* pValidMove : m_validTiles)
+										{
+											if (pValidMove != pKingTile)
+											{
+												newValidMoves.push_back(pValidMove);
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}	
+			m_validTiles = newValidMoves;
+		}
 	}
 
-	
 	// Validate Move
 	// If as a result of this move, you would unleash a discovered Check...
 	// Remove it from the valid tiles
@@ -1612,96 +1677,101 @@ bool Board::IsInCheck(const Piece& selectedObject, std::vector<Tile*>& checkers)
 								{
 									absYDiff *= -1;
 								}
-								inbetweenTiles.push_back(pAttackersTile);												
-								// Deduce COORD Rule Based on positions
-								Coordinate rules[8] =
-								{
-									{1,0},
-									{1, 1},
-									{1, -1},
-									{0, 1},
-									{0, -1},
-									{-1, 0},
-									{-1, 1},
-									{ -1, -1}
-								};
-								
-								int ruleID = -1;								
-								if (xDiff < 0)
-								{
+								inbetweenTiles.push_back(pAttackersTile);
 
-									// ADD X
-
-									// King is on our right
-									if (yDiff < 0)
-									{
-										// King is below us
-										ruleID = 1; // SE
-									}
-									else if (yDiff == 0)
-									{
-										// King is adjacent to us
-										ruleID = 0; // E
-									}
-									else
-									{
-										// King is above us
-										ruleID = 2; // NE
-									}
-								}
-								else if (xDiff == 0)
+								const bool isHorseAttack = pAttackersTile->GetFlags() & (uint32_t)Piece::PieceFlag::Horse;
+								if (!isHorseAttack)
 								{
-									// King is vertical with us
-									if (yDiff < 0)
+									// Deduce COORD Rule Based on positions
+									Coordinate rules[8] =
 									{
-										// King is below us
-										ruleID = 3;
+										{1,0},
+										{1, 1},
+										{1, -1},
+										{0, 1},
+										{0, -1},
+										{-1, 0},
+										{-1, 1},
+										{ -1, -1}
+									};
 
-									}
-									else
+									int ruleID = -1;
+									if (xDiff < 0)
 									{
-										// King is above us
-										ruleID = 4;
-									}
-								}
-								else
-								{
-									// King is on our left
-									if (yDiff < 0)
-									{
-										// King is below us
-										ruleID = 6;
 
-									}
-									else if (yDiff == 0)
-									{
-										// King is adjacent to us+
-										ruleID = 5;
-									}
-									else
-									{
-										// King is above us
-										ruleID = 7;
-									}
-								}
+										// ADD X
 
-								bool kingNotFound = true;
-								int counter = 1;
-								while (kingNotFound)
-								{
-									Coordinate inBetweenCoord = attackerCoord + (rules[ruleID] * counter++);
-									const int inbetweenTileID = GetTileIDFromCoord(inBetweenCoord);
-									if (Tile* pInbetweenTile = GetTile(inbetweenTileID))
-									{
-										if (inBetweenCoord == kingCoord)
+										// King is on our right
+										if (yDiff < 0)
 										{
-											kingNotFound = false;
-											break;
+											// King is below us
+											ruleID = 1; // SE
 										}
-										inbetweenTiles.push_back(pInbetweenTile);
+										else if (yDiff == 0)
+										{
+											// King is adjacent to us
+											ruleID = 0; // E
+										}
+										else
+										{
+											// King is above us
+											ruleID = 2; // NE
+										}
 									}
-								};
+									else if (xDiff == 0)
+									{
+										// King is vertical with us
+										if (yDiff < 0)
+										{
+											// King is below us
+											ruleID = 3;
 
+										}
+										else
+										{
+											// King is above us
+											ruleID = 4;
+										}
+									}
+									else
+									{
+										// King is on our left
+										if (yDiff < 0)
+										{
+											// King is below us
+											ruleID = 6;
+
+										}
+										else if (yDiff == 0)
+										{
+											// King is adjacent to us+
+											ruleID = 5;
+										}
+										else
+										{
+											// King is above us
+											ruleID = 7;
+										}
+									}
+
+									bool kingNotFound = true;
+									int counter = 1;
+									while (kingNotFound)
+									{
+										Coordinate inBetweenCoord = attackerCoord + (rules[ruleID] * counter++);
+										const int inbetweenTileID = GetTileIDFromCoord(inBetweenCoord);
+										if (Tile* pInbetweenTile = GetTile(inbetweenTileID))
+										{
+											if (inBetweenCoord == kingCoord)
+											{
+												kingNotFound = false;
+												break;
+											}
+											inbetweenTiles.push_back(pInbetweenTile);
+										}
+									};
+								}
+								
 								m_checkedMapInterception.emplace(pAttackersTile, inbetweenTiles);								
 								checkers.push_back(pAttackersTile);
 							}
