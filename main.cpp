@@ -6,7 +6,7 @@
 
 int main(int argc, char* argv[])
 {
-	GameLoop* pGameLoop = new GameLoop(1280, 720);
+	GameLoop* pGameLoop = new GameLoop();// 1280, 720);
 	const int FPS = 60;
 	const int frameExpectation = 1000 / FPS;
 	uint32_t frameStart;

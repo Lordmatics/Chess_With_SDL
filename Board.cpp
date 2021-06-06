@@ -168,100 +168,6 @@ void Board::GenerateLegalMoves(Piece* pSelectedObject)
 	if (IsInCheck(*pSelectedObject, checkers))
 	{
 		GenerateCheckList(*pSelectedObject, checkers);
-
-		//std::vector<Tile*> newValidTiles;
-		//std::vector<Tile*> potentiallyValidTiles;
-		//const bool isKing = flags & (uint32_t)Piece::PieceFlag::King;
-		//const int numberOfCheckers = (const int)checkers.size();
-		//for (Tile* pTile : checkers)
-		//{
-		//	if (Piece* pAttacker = pTile->GetPiece())
-		//	{
-		//		for (Tile* pCurrentValidTile : m_validTiles)
-		//		{
-		//			// Iterate over our current acceptable moves
-		//			// And essentially discard them unless they capture the attacker (1 checker)
-		//			// OR
-		//			// They manage to intercept the checkers attack (varies on num of attackers)
-
-		//			// First Remove all moves that exist in the attackers line of sight
-		//			const std::vector<Tile*>& attackingList = pAttacker->GetAttackedTiles();
-		//			bool matchFound = false;
-		//			for (Tile* pUnderAttackTile : attackingList)
-		//			{
-		//				if (pCurrentValidTile == pUnderAttackTile)
-		//				{
-		//					if (isKing)
-		//					{
-		//						matchFound = true;
-		//						break;
-		//					}
-		//					else
-		//					{
-		//						// Move to this tile - Intercepts check - Allowed
-		//						if (numberOfCheckers == 1)
-		//						{
-		//							newValidTiles.push_back(pCurrentValidTile);
-		//						}
-		//						else
-		//						{
-		//							// If we have more than one attacker creating check
-		//							// Store this move for later - it might be valid - needs to pass test against all checkers, at blocking their line of sight on the king
-		//							// Ensure no duplicates
-		//							bool add = true;
-		//							for (Tile* pPotentials : potentiallyValidTiles)
-		//							{
-		//								if (pPotentials == pCurrentValidTile)
-		//								{
-		//									add = false; 
-		//									break;
-		//								}
-		//							}
-		//							if(add)
-		//								potentiallyValidTiles.push_back(pCurrentValidTile);
-		//						}
-		//					}							
-		//				}
-		//			}
-		//			if (!matchFound)
-		//			{
-		//				// Move escapes check - allowed
-		//				newValidTiles.push_back(pCurrentValidTile);
-		//			}
-		//		}
-		//	}
-		//}
-		//if (numberOfCheckers > 1)
-		//{
-		//	int matchFound = 0;
-		//	for (Tile* pPotentials : potentiallyValidTiles)
-		//	{
-		//		// Check if the move is in both attackers attacking lists
-		//		for (Tile* pTile : checkers)
-		//		{
-		//			if (Piece* pAttacker = pTile->GetPiece())
-		//			{
-		//				const std::vector<Tile*>& attackingList = pAttacker->GetAttackedTiles();
-		//				for (Tile* pAttackedTile : attackingList)
-		//				{
-		//					if (pPotentials == pAttackedTile)
-		//					{
-		//						matchFound++;
-		//						break;
-		//					}
-		//				}
-		//			}
-		//		}
-		//		// If it was a spot in both their attacking line of sights
-		//		// It's valid, as it blocks both checks
-		//		if (matchFound == numberOfCheckers)
-		//		{
-		//			newValidTiles.push_back(pPotentials);
-		//		}
-		//	}
-		//}
-		//// Overwrite valid moves - now that CHECK rules has been applied
-		//m_validTiles = newValidTiles;
 	}
 	else
 	{
@@ -282,8 +188,11 @@ void Board::GenerateLegalMoves(Piece* pSelectedObject)
 				}
 			}
 			//pSelectedObject->ClearAttackedTiles();
-			m_validTiles.clear();
-			m_validTiles.push_back(pPinnerTile);
+			if (allowCapture)
+			{
+				m_validTiles.clear();
+				m_validTiles.push_back(pPinnerTile);
+			}
 		}
 
 		if (flags & (uint32_t)Piece::PieceFlag::King)
@@ -334,65 +243,67 @@ void Board::GenerateLegalMoves(Piece* pSelectedObject)
 		else
 		{
 			// Remove King from Movable Tile
-			std::vector<Tile*> newValidMoves;
-			// Check we're not moving INTO check...			
-			// Scan for enemy king - and remove from valid list if its in there
-			for (int i = 0; i < 2; i++)
-			{
-				if (ChessUser* pUser = m_players[i])
-				{
-					if (pUser != pSelectedObject->GetOwner())
-					{
-						Piece* pieces = pUser->GetPieces();
-						bool dontAdd = false;
-						static bool useDangerousLookup = true; // Faster but prone to error if piece arrangement changes
-						if (useDangerousLookup)
-						{
-							// B 4
-							// W 12
-							const int pieceID = pUser->IsWhite() ? 12 : 4;
-							Piece& piece = pieces[pieceID];
-							const Coordinate& kingPos = piece.GetCoordinate();
-							const int kingTileID = GetTileIDFromCoord(kingPos);
-							if (Tile* pKingTile = GetTile(kingTileID))
-							{
-								for (Tile* pValidMove : m_validTiles)
-								{
-									if (pValidMove != pKingTile)
-									{
-										newValidMoves.push_back(pValidMove);
-									}
-								}
-							}
-						}
-						else
-						{
-							for (int j = 0; j < 16; j++)
-							{
-								Piece& piece = pieces[j];
-								if (piece.IsCaptured())
-									continue;
+			// This does work, but breaks 'InCheck' logic, as need king to be in the attacking list lol...
+			// Now handling it differently
+			//std::vector<Tile*> newValidMoves;
+			//// Check we're not moving INTO check...			
+			//// Scan for enemy king - and remove from valid list if its in there
+			//for (int i = 0; i < 2; i++)
+			//{
+			//	if (ChessUser* pUser = m_players[i])
+			//	{
+			//		if (pUser != pSelectedObject->GetOwner())
+			//		{
+			//			Piece* pieces = pUser->GetPieces();
+			//			bool dontAdd = false;
+			//			static bool useDangerousLookup = true; // Faster but prone to error if piece arrangement changes
+			//			if (useDangerousLookup)
+			//			{
+			//				// B 4
+			//				// W 12
+			//				const int pieceID = pUser->IsWhite() ? 12 : 4;
+			//				Piece& piece = pieces[pieceID];
+			//				const Coordinate& kingPos = piece.GetCoordinate();
+			//				const int kingTileID = GetTileIDFromCoord(kingPos);
+			//				if (Tile* pKingTile = GetTile(kingTileID))
+			//				{
+			//					for (Tile* pValidMove : m_validTiles)
+			//					{
+			//						if (pValidMove != pKingTile)
+			//						{
+			//							newValidMoves.push_back(pValidMove);
+			//						}
+			//					}
+			//				}
+			//			}
+			//			else
+			//			{
+			//				for (int j = 0; j < 16; j++)
+			//				{
+			//					Piece& piece = pieces[j];
+			//					if (piece.IsCaptured())
+			//						continue;
 
-								if (piece.GetFlags() & (uint32_t)Piece::PieceFlag::King)
-								{
-									const Coordinate& kingPos = piece.GetCoordinate();
-									const int kingTileID = GetTileIDFromCoord(kingPos);
-									if (Tile* pKingTile = GetTile(kingTileID))
-									{
-										for (Tile* pValidMove : m_validTiles)
-										{
-											if (pValidMove != pKingTile)
-											{
-												newValidMoves.push_back(pValidMove);
-											}
-										}
-									}
-								}
-							}
-						}
-					}
-				}
-			}	
+			//					if (piece.GetFlags() & (uint32_t)Piece::PieceFlag::King)
+			//					{
+			//						const Coordinate& kingPos = piece.GetCoordinate();
+			//						const int kingTileID = GetTileIDFromCoord(kingPos);
+			//						if (Tile* pKingTile = GetTile(kingTileID))
+			//						{
+			//							for (Tile* pValidMove : m_validTiles)
+			//							{
+			//								if (pValidMove != pKingTile)
+			//								{
+			//									newValidMoves.push_back(pValidMove);
+			//								}
+			//							}
+			//						}
+			//					}
+			//				}
+			//			}
+			//		}
+			//	}
+			//}	
 			//m_validTiles = newValidMoves;
 		}
 	}
