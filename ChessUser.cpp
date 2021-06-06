@@ -39,29 +39,10 @@ void ChessUser::Init(SDL_Renderer* pRenderer, Board* board)
 		// 8 Objects
 		for (int j = 0; j < Board::m_iColumns; j++)
 		{
-
-
-
-
-
-			/*
-				0 + 1 * 0 + 1 = 1 - 1 = 0
-				1 + 1 * 0 + 1 = 2 - 1 = 1
-				2 + 1 * 0 + 1 = 3 - 1 = 2
-				7 + 1 * 0 + 1 = 8 - 1 = 7
-
-				0 + 1 * 1 + 1 = 2 - 1 = 1
-				
-				
-				
-			*/
-
-
 			int index = (i * 8) + j;
 			if(index < 0 || index >= 16)
 				continue;
 
-			//int index = i == 0 ? ( (j + 1) * (i + 1)) - 1 : (j + 1) * (i+1);// +1);
 			Piece& object = m_material[index];
 			object.Init(pRenderer, i, j, this);
 			// Update Board with Players Piece

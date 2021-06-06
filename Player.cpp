@@ -114,8 +114,7 @@ Piece* Player::MakeMove(SDL_Renderer* pRenderer, Tile& tileOnRelease)
 	}
 
 	if (IsMyTurn())
-	{
-		
+	{	
 		Piece* pSelectedPiece = m_pSelectedPiece;
 		if (!pSelectedPiece)
 		{
@@ -127,7 +126,9 @@ Piece* Player::MakeMove(SDL_Renderer* pRenderer, Tile& tileOnRelease)
 		// Begin to allow the move
 		auto tileMatch = [&tileOnRelease](Tile* pOtherTile)
 		{
-			return &tileOnRelease == pOtherTile;
+			// Don't allow captures of KINGs
+			const bool isOtherTileKing = pOtherTile->GetFlags() & (uint32_t)Piece::PieceFlag::King;
+			return &tileOnRelease == pOtherTile && !isOtherTileKing;
 		};
 		if (pBoard->TileMatch(tileMatch, 1))
 		{

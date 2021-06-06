@@ -5,6 +5,7 @@
 #include "SDL_render.h"
 #include "Utils.h"
 #include "PieceMoveHistory.h"
+#include "GameLoop.h"
 
 std::map<Piece::PieceFlag, int> Piece::m_valueMap =
 {
@@ -64,51 +65,6 @@ const char* Piece::GetPieceName() const
 	return "Unknown";
 }
 
-//void Piece::SetPos(int x, int y)
-//{
-//	if (ChessUser* pOwner = m_pOwner)
-//	{
-//		//if (south)
-//		//{
-//		//	xCoord = j;
-//		//	yCoord = 8 + (i - 2);
-//		//}
-//		//else
-//		//{
-//		//	// 0 then 1
-//		//	// we want 1 then 0
-//		//	xCoord = j;
-//		//	yCoord = i;//1 - i;
-//		//}
-//
-//		const bool south = pOwner->GetSide() == ChessUser::Side::BOTTOM ? true : false;
-//		int i = south ? m_boardCoordinate.m_y + 2 - 8 : m_boardCoordinate.m_y;
-//		int j = m_boardCoordinate.m_x;
-//		const bool pawnConfig = (i == 0 && south) || (i == 1 && !south);
-//		const int innerTilePieceOffset = 16;
-//		const int innerTilePawnOffset = 26;
-//		const int buffer = pawnConfig ? innerTilePawnOffset : innerTilePieceOffset;
-//		const int xOffset = 896 / 2; // Quarter X Reso
-//		const int yOffset = 28; // Each tile is 128, so 128 * 8 = 1024. reso = 1920:1080, so 1080 - 1024 = 56, then half top/bot, so 28 each side
-//		const int tileSize = 128;
-//		int xPos = xOffset + buffer + (j * tileSize);
-//		if (south)
-//		{
-//			int yPos = yOffset + buffer + ((i + 6) * tileSize);
-//			x = xPos;
-//			y = yPos;
-//		}
-//		else
-//		{
-//			int yPos = yOffset + buffer + (i * tileSize);
-//			x = xPos;
-//			y = yPos;
-//		}
-//	}
-//
-//	apiObject::SetPos(x, y);
-//}
-
 void Piece::UpdatePosFromCoord()
 {
 	int x = 0;
@@ -119,12 +75,20 @@ void Piece::UpdatePosFromCoord()
 		int i = south ? m_boardCoordinate.m_y + 2 - 8 : m_boardCoordinate.m_y;
 		int j = m_boardCoordinate.m_x;
 		const bool pawnConfig = GetFlags() & (uint32_t)PieceFlag::Pawn;// (i == 0 && south) || (i == 1 && !south);
-		const int innerTilePieceOffset = 16;
-		const int innerTilePawnOffset = 26;
+		const int innerTilePieceOffset = GameLoop::s_pieceOffset;// 16;
+		const int innerTilePawnOffset = GameLoop::s_pawnOffset;// 26;
 		const int buffer = pawnConfig ? innerTilePawnOffset : innerTilePieceOffset;
-		const int xOffset = 896 / 2; // Quarter X Reso
-		const int yOffset = 28; // Each tile is 128, so 128 * 8 = 1024. reso = 1920:1080, so 1080 - 1024 = 56, then half top/bot, so 28 each side
-		const int tileSize = 128;
+		//const int xOffset = 896 / 2; // Quarter X Reso
+		//const int yOffset = 28; // Each tile is 128, so 128 * 8 = 1024. reso = 1920:1080, so 1080 - 1024 = 56, then half top/bot, so 28 each side
+		//const int tileSize = 128;
+		//const int tileSize = GameLoop::s_tileSize; //(int)(GameLoop::s_width / 16);// (int)(GameLoop::s_height / 8.4375f);// 128;
+		//const int xOffset = GameLoop::s_width / 4;//  896 / 2; // Quarter X Reso
+		//const int yOffset = (GameLoop::s_height - (tileSize * 9)) / 2;// 28; // Each tile is 128, so 128 * 8 = 1024. reso = 1920:1080, so 1080 - 1024 = 56, then half top/bot, so 28 each side
+		const int tileSize = GameLoop::s_tileSize;// (int)(GameLoop::s_width / 16);// (int)(GameLoop::s_height / 8.4375f);// 128;
+		const int xOffset = GameLoop::s_xOffset;// GameLoop::s_width / 4;//  896 / 2; // Quarter X Reso
+		const int yOffset = GameLoop::s_yOffset;// (GameLoop::s_height - (tileSize * 9)) / 2;// 28; // Each tile is 128, so 128 * 8 = 1024. reso = 1920:1080, so 1080 - 1024 = 56, then half top/bot, so 28 each side
+
+
 		int xPos = xOffset + buffer + (j * tileSize);
 		if (south)
 		{
@@ -251,8 +215,8 @@ void Piece::Init(SDL_Renderer* pRenderer, int i, int j, ChessUser* pOwner)
 
 	SetCoord({ xCoord, yCoord });
 
-	const int pieceSize = 96;
-	const int pawnSize = 76;
+	const int pieceSize = GameLoop::s_pieceSize;// 96;
+	const int pawnSize = GameLoop::s_pawnSize;// 76;
 	const int size = pawnConfig ? pawnSize : pieceSize;
 	SetSize(size, size);
 	UpdatePosFromCoord();

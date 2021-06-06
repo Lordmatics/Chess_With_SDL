@@ -35,8 +35,8 @@ public:
 
 	virtual void Debug() override;
 
-	static const int s_iTileWidth = 128;
-	static const int s_iTileHeight = 128;
+	//static const int s_iTileWidth = 128;
+	//static const int s_iTileHeight = 128;
 	bool IsDefended();
 private:
 

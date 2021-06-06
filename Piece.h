@@ -65,6 +65,7 @@ public:
 	void UpdateVisibileTiles(const std::vector<Tile*>& queryTiles);
 	void UpdateAttackedTiles(const std::vector<Tile*>& attackedTiles);
 	void UpdateCheckedTiles(const std::vector<Tile*>& checkedTiles);
+	
 	void ClearAttackedTiles();
 	bool IsEnemy(uint32_t param1) const;
 	const std::string& GetInfo();

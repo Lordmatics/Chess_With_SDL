@@ -2,6 +2,7 @@
 #include "SDL_render.h"
 #include "Board.h"
 #include <iostream>
+#include "GameLoop.h"
 
 Tile::Tile() :
 	apiObject(),
@@ -69,28 +70,20 @@ void Tile::Init(SDL_Renderer* pRenderer, int boardID)
 		return;
 
 	m_iBoardIndex = boardID;
-	// E O E O E O E O
-	//if (boardID % 8 == 0)
-	//{
-	//	boardID = boardID + 1;
-	//	// O E O E O E O E
-	//}
-
-
-	// Tile 5
-	// Remainder = 5
-	// Divisible = 0
-
-				//int temp = i;// +1;
-			//x = (temp ) % Board::m_iColumns;
-			//y = (int)(temp / Board::m_iColumns);
 
 	int x = boardID % 8;
 	int y = (int)boardID / 8;
 	m_boardCoordinate = { x, y };
-	const int tileSize = 128;
-	const int xOffset = 896 / 2; // Quarter X Reso
-	const int yOffset = 28; // Each tile is 128, so 128 * 8 = 1024. reso = 1920:1080, so 1080 - 1024 = 56, then half top/bot, so 28 each side
+	//const int tileSize = 128;
+	//const int xOffset = 896 / 2; // Quarter X Reso
+	//const int yOffset = 28; // Each tile is 128, so 128 * 8 = 1024. reso = 1920:1080, so 1080 - 1024 = 56, then half top/bot, so 28 each side
+	
+	//const int tileSize = GameLoop::s_tileSize; //(int)(GameLoop::s_width / 16);//  (int)(GameLoop::s_height / 8.4375f);// 128;
+	//const int xOffset = GameLoop::s_width / 4;//  896 / 2; // Quarter X Reso
+	//const int yOffset = (GameLoop::s_height - (tileSize * 7)) / 2;// 28; // Each tile is 128, so 128 * 8 = 1024. reso = 1920:1080, so 1080 - 1024 = 56, then half top/bot, so 28 each side
+	const int tileSize = GameLoop::s_tileSize;// (int)(GameLoop::s_width / 16);// (int)(GameLoop::s_height / 8.4375f);// 128;
+	const int xOffset = GameLoop::s_xOffset;// GameLoop::s_width / 4;//  896 / 2; // Quarter X Reso
+	const int yOffset = GameLoop::s_yOffset;// (GameLoop::s_height - (tileSize * 9)) / 2;// 28; // Each tile is 128, so 128 * 8 = 1024. reso = 1920:1080, so 1080 - 1024 = 56, then half top/bot, so 28 each side
 
 	NMSprite& sprite = GetSprite();
 	if (y % 2 == 0)
@@ -122,19 +115,11 @@ void Tile::Init(SDL_Renderer* pRenderer, int boardID)
 		}
 	}
 
-	//if (boardID % 2 == 0)
-	//{
-	//	sprite.AssignSprite(pRenderer, Board::m_tileMap[Board::TileType::TILEL]);
-	//}
-	//else
-	//{
-	//	sprite.AssignSprite(pRenderer, Board::m_tileMap[Board::TileType::TILED]);
-	//}
 	SDL_Rect& rect = GetTransform();
-	rect.h = s_iTileHeight;
-	rect.w = s_iTileWidth;
-	rect.x = xOffset + (x * s_iTileWidth);
-	rect.y = yOffset + (y * s_iTileHeight);
+	rect.h = tileSize;// _iTileHeight;
+	rect.w = tileSize;// s_iTileWidth;
+	rect.x = xOffset + (x * tileSize);
+	rect.y = yOffset + (y * tileSize);
 
 	Debug();
 }

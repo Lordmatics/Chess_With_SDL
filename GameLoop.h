@@ -29,6 +29,17 @@ public:
 	void Process(float dt);
 	void Render();
 
+	static int s_tileSize;
+	static int s_width;
+	static int s_height;
+
+	static int s_xOffset;
+	static int s_yOffset;
+	
+	static int s_pieceSize;
+	static int s_pawnSize;
+	static int s_pieceOffset;
+	static int s_pawnOffset;
 private:
 	void ConstructSDL(int w = 1920, int h = 1080, bool fullscreen = false);
 

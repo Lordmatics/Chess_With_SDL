@@ -2,6 +2,7 @@
 #include "SDL_render.h"
 #include <iostream>
 #include <time.h>
+#include "GameLoop.h"
 
 std::map<Board::TileType, const char*> Board::m_tileMap =
 {
@@ -107,11 +108,6 @@ Piece* Board::GetPieceAtPoint(SDL_Point* point, int startIndex)
 
 void Board::GenerateLegalMoves(Piece* pSelectedObject)
 {
-	//if (!m_queryingTiles.empty())
-	//{
-	//	return;
-	//}
-
 	m_queryingTiles.clear();
 	m_validTiles.clear();
 
@@ -120,15 +116,7 @@ void Board::GenerateLegalMoves(Piece* pSelectedObject)
 		return;
 	}
 
-	bool bPinned = false;
 	Piece* pPinner = IsPiecePinned(*pSelectedObject);
-	if(pPinner)
-	{
-		bPinned = true;
-		// TODO: Allow capture on the pinner as a move.
-		//pSelectedObject->ClearAttackedTiles();
-		//return;
-	}
 
 	int x = 0;
 	int y = 0;
@@ -171,6 +159,8 @@ void Board::GenerateLegalMoves(Piece* pSelectedObject)
 	{
 		// Small optimisation
 		// If Piece is already boxed in and cannot move, don't calculate any further
+		//pSelectedObject->ClearAttackedTiles()
+		pSelectedObject->ClearAttackedTiles();
 		return;
 	}
 
@@ -277,7 +267,7 @@ void Board::GenerateLegalMoves(Piece* pSelectedObject)
 	{
 		m_checkedMapInterception.clear();
 
-		if (bPinned)
+		if (pPinner)
 		{
 			Tile* pPinnerTile = GetTile(GetTileIDFromCoord(pPinner->GetCoordinate()));
 			// Determine new valid moves
@@ -403,114 +393,12 @@ void Board::GenerateLegalMoves(Piece* pSelectedObject)
 					}
 				}
 			}	
-			m_validTiles = newValidMoves;
+			//m_validTiles = newValidMoves;
 		}
 	}
 
-	// Validate Move
-	// If as a result of this move, you would unleash a discovered Check...
-	// Remove it from the valid tiles
-	// So essentially, determine if we are pinned - then we cannot move anywhere, EXCEPT (maybe) a capture on the pinner
 	pSelectedObject->UpdateVisibileTiles(m_queryingTiles);
-	// NOTE: Can perhaps do this before evaluating this pieces moves altogether
-	//if (Piece* pPinner = IsPiecePinned(*pSelectedObject))
-	//{
-	//	// For Now, disallow movement from this piece		
-	//	m_validTiles.clear(); // NOTE: This clear may be unnecessary
-	//	pSelectedObject->ClearAttackedTiles();
-	//}
-	//else
-	//{
-	//	pSelectedObject->UpdateAttackedTiles(m_validTiles);
-	//}
 	pSelectedObject->UpdateAttackedTiles(m_validTiles);
-	return;
-
-	const bool playerIsWhite = m_player.IsWhite();
-	const bool aiIsWhite = m_opponent.IsWhite();
-	// Filter Valid Moves to Legal Moves
-	// Essentially any move that doesn't result in us being put in check
-	// So simulate each valid move, then evaluate the position
-	// If the position results in the king being capturable
-	// Exclude that move
-
-	// Needs to include the attacker
-	const std::vector<Tile*>& checkedTiles = GetCheckedTilesConst();
-	if (checkedTiles.size() <= 0)
-	{
-		return;
-	}
-
-	int eraseIndex = 0;
-	std::vector<Tile*> finalTiles;
-	// Logic needs flipping for king
-	bool isKing = flags & (uint32_t)Piece::PieceFlag::King;
-
-	if (isKing)
-	{
-		for (Tile* pPseudoTile : m_validTiles)
-		{
-			bool dontAdd = false;
-			for (Tile* pCheckedTile : checkedTiles)
-			{
-				if (pPseudoTile == pCheckedTile)
-				{
-					// Don't let the king go to a square that is under check vision
-					// Unless... The move itself would allow us to capture the attacker
-					Piece* pAttackingPiece = pCheckedTile->GetPiece();
-					if(!pAttackingPiece)
-					{
-						dontAdd = true;
-						break;
-					}	
-					else
-					{
-						finalTiles.push_back(pPseudoTile);
-					}
-					break;
-				}	
-			}
-			if (!dontAdd)
-			{
-				finalTiles.push_back(pPseudoTile);	
-			}
-		}
-	}
-	else
-	{
-		for (Tile* pPseudoTile : m_validTiles)
-		{
-			for (Tile* pCheckedTile : checkedTiles)
-			{
-				if (pPseudoTile == pCheckedTile)
-				{
-					finalTiles.push_back(pPseudoTile);
-					break;
-				}
-			}
-		}
-	}
-
-
-	m_validTiles = finalTiles;
-
-	if (isWhite)
-	{
-		if (!playerIsWhite)
-		{
-			// AI Playing as White vs Black Pieces [Player]
-			
-		}
-		else if(!aiIsWhite)
-		{
-			// AI Pla
-		}
-		
-	}
-	else
-	{
-
-	}
 }
 
 Board::Board()
@@ -532,9 +420,9 @@ void Board::Init(SDL_Renderer* pRenderer)
 	}
 
 	// TODO: Make these more consistent dependant on resolution
-	const int tileSize = 128;
-	const int xOffset = 896 / 2; // Quarter X Reso
-	const int yOffset = 28; // Each tile is 128, so 128 * 8 = 1024. reso = 1920:1080, so 1080 - 1024 = 56, then half top/bot, so 28 each side
+	const int tileSize = GameLoop::s_tileSize;// (int)(GameLoop::s_width / 16);// (int)(GameLoop::s_height / 8.4375f);// 128;
+	const int xOffset = GameLoop::s_xOffset;// GameLoop::s_width / 4;//  896 / 2; // Quarter X Reso
+	const int yOffset = GameLoop::s_yOffset;// (GameLoop::s_height - (tileSize * 9)) / 2;// 28; // Each tile is 128, so 128 * 8 = 1024. reso = 1920:1080, so 1080 - 1024 = 56, then half top/bot, so 28 each side
 	
 	int file = 0;
 	int rank = 7;
@@ -612,6 +500,11 @@ void Board::Render(SDL_Renderer* pRenderer)
 
 	for (Tile* pTile : m_highlightTiles)
 	{
+		if (pTile->GetFlags() & (uint32_t)Piece::PieceFlag::King)
+		{
+			// Ignore
+			continue;
+		}
 		pTile->RenderLegalHighlight(pRenderer);
 	}
 
@@ -619,22 +512,6 @@ void Board::Render(SDL_Renderer* pRenderer)
 	{
 		m_players[i]->Render(pRenderer);
 	}
-
-	//if (Piece* pSelected = m_player. m_pSelectedPiece)
-	//{
-	//	if (!pSelected->RenderAsSelected(pRenderer))
-	//	{
-	//		m_pSelectedRect = nullptr;
-	//
-	//		pSelected->SetSelected(false);
-	//		m_pSelectedPiece = nullptr;
-	//
-	//		if (Tile* pPiecesTile = m_pPiecesTile)
-	//		{
-	//			m_pPiecesTile = nullptr;
-	//		}
-	//	}
-	//}
 }
 
 Board::PiecePaths::PiecePaths(const char* a, const char* b)
@@ -1301,38 +1178,7 @@ void Board::SetPreviouslyMoved(Piece* pSelectedPiece)
 
 void Board::OnLeftClickDown(SDL_Renderer* pRenderer)
 {
-	//const bool playerIsWhite = m_player.IsWhite();	
 	m_player.TryGenerateMoves(pRenderer, m_mousePosition);
-	//if (Tile* pTile = GetTileAtPoint(&m_mousePosition))
-	//{
-	//	if (SDL_Rect* pawnTransform = &pTile->GetTransform())
-	//	{
-	//		if (SDL_PointInRect(&m_mousePosition, pawnTransform))
-	//		{
-	//			if (Piece* pOccupant = pTile->GetPiece())
-	//			{
-	//				const bool isWhite = pOccupant->GetFlags() & (uint32_t)Piece::PieceFlag::White;
-	//				if (isWhite != playerIsWhite && !m_disableAI)
-	//				{
-	//					ClearInput();
-	//				}
-	//				else
-	//				{
-	//					m_resetPos = pOccupant->GetTransform();
-	//					m_pSelectedRect = &pOccupant->GetTransform();
-	//					m_pPiecesTile = pTile;
-	//					m_pSelectedPiece = pOccupant;
-	//					m_pSelectedPiece->SetSelected(true);
-	//				}
-	//			}
-	//		}
-	//	}
-	//}
-
-	//if (IsPlayersTurn())
-	//{
-	//	GenerateLegalMoves(m_pSelectedPiece);
-	//}
 }
 
 void Board::OnLeftClickRelease(SDL_Renderer* pRenderer)
@@ -1347,121 +1193,6 @@ void Board::OnLeftClickRelease(SDL_Renderer* pRenderer)
 	{
 		m_player.MakeMove(pRenderer, *pTile);
 	}
-
-
-	//if (IsPlayersTurn())
-	//{
-	//	//for (int i = 0; i < Board::m_iColumns; i++)
-	//	{
-	//		if (Tile* pTile = GetTileAtPoint(&m_mousePosition))
-	//		{
-	//			if (SDL_Rect* pawnTransform = &pTile->GetTransform())
-	//			{
-	//				const bool isAPawn = m_pSelectedPiece ? m_pSelectedPiece->GetFlags() & (uint32_t)Piece::PieceFlag::Pawn : false;
-	//				auto Predicate = [&pTile](Tile* pOtherTile)
-	//				{
-	//					return pTile == pOtherTile;
-	//				};
-	//				if (TileMatch(Predicate, 1))
-	//				{
-	//					const bool isTileAPromotionSquare = pTile->IsPromotionSquare();
-	//					if (Piece* pDefender = pTile->GetPiece())
-	//					{
-	//						isACapture = true;
-
-	//						pDefender->SetCaptured(true);
-
-	//						if (isAPawn && isTileAPromotionSquare && m_pSelectedPiece)
-	//						{
-	//							if (Piece* pSelectedPiece = m_pSelectedPiece)
-	//							{
-	//								pSelectedPiece->Promote(pRenderer);
-	//							}
-	//						}
-	//					}
-	//					else
-	//					{
-	//						// Need to consider EnPassant
-	//						// If the piece could move to this square was a pawn
-	//						// And the Tile BELOW it HAS a Pawn as well.
-	//						// Need to terminate that tiles piece
-	//						if (Piece* pSelectedPiece = m_pSelectedPiece)
-	//						{
-	//							pSelectedPiece->CheckEnpassant(*pTile, *this);
-
-	//							if (isAPawn)
-	//							{
-	//								if (isTileAPromotionSquare)
-	//								{
-	//									pSelectedPiece->Promote(pRenderer);
-	//								}
-	//							}
-	//							else
-	//							{
-	//								pSelectedPiece->CheckCastling(*pTile, *this);
-	//							}
-	//						}
-	//					}
-
-	//					allowMove = true;
-	//					// Need to apply piece offsets
-	//					newCoord = pTile->GetCoordinate();
-	//					pNewTile = pTile;
-	//					//break;
-	//				}
-	//			}
-	//		}
-	//	}
-	//}
-
-	//if (allowMove)
-	//{
-	//	if (Piece* pSelectedPiece = m_pSelectedPiece)
-	//	{
-	//		// Need to tell previous tile that we're gone
-	//		// And New tile that we have arrived
-	//		if (Tile* pPrevTile = m_pPiecesTile)
-	//		{
-	//			pPrevTile->SetPiece(nullptr);
-	//			m_pPiecesTile = nullptr;
-	//		}
-	//		pSelectedPiece->SetCoord(newCoord);
-	//		pSelectedPiece->UpdatePosFromCoord();
-	//		if (Tile* pDestinationTile = pNewTile)
-	//		{
-	//			pDestinationTile->SetPiece(pSelectedPiece);
-	//		}
-	//		m_playersTurn = false;
-
-	//		m_pSelectedRect = nullptr;
-	//		
-	//		SetPreviouslyMoved(pSelectedPiece);
-	//		pSelectedPiece->SetSelected(false);
-	//		m_pSelectedPiece = nullptr;
-	//		
-	//		//if (Tile* pPiecesTile = m_pPiecesTile)
-	//		//{
-	//		//	m_pPiecesTile = nullptr;
-	//		//}
-
-	//		bool resultedInCheck = m_player.DetectChecks();
-	//		if (resultedInCheck)
-	//		{
-	//			volatile int i = 5;
-	//		}
-	//		RunAI(pRenderer, m_playersTurn);
-	//	}
-	//}
-	//else
-	//{
-	//	if (m_pSelectedRect)
-	//	{
-	//		m_pSelectedRect->x = m_resetPos.x;
-	//		m_pSelectedRect->y = m_resetPos.y;
-	//	}
-	//}
-
-	//ClearInput();
 }
 
 void Board::Process(float dt)
@@ -1650,9 +1381,15 @@ bool Board::IsInCheck(const Piece& selectedObject, std::vector<Tile*>& checkers)
 						continue;
 
 					const std::vector<Tile*>& attackingList = piece.GetAttackedTiles();
+					const bool amIWhite = piece.GetFlags() & (uint32_t)Piece::PieceFlag::White;
 					for (Tile* pTile : attackingList)
 					{
 						if (!pTile)
+							continue;
+
+						// If Pieces are same colour ignore
+						const bool isWhite = pTile->IsColour((uint32_t)Piece::PieceFlag::White);
+						if(isWhite == amIWhite)
 							continue;
 
 						if (pTile->GetFlags() & (uint32_t)Piece::PieceFlag::King)
@@ -1664,6 +1401,13 @@ bool Board::IsInCheck(const Piece& selectedObject, std::vector<Tile*>& checkers)
 								attackerCoord = pAttackersTile->GetCoordinate();
 								kingCoord = pTile->GetCoordinate();
 								// Generate Inbetween tiles
+
+								// TODO: INBETWEEN TILES NOT ACCURATE IF QUEEN IS CHECKING YOU
+								// NEED TO CONSIDER DIAGONALS AS WELL AS DIRECT LINE OF SIGHT
+								// so compare all Visibile Tiles Queen has vs All Kings current movement
+								// Then eliminate results from that
+								// This will fix King being able to move diagonally next to queen
+
 								std::vector<Tile*> inbetweenTiles;
 								int xDiff = attackerCoord.m_x - kingCoord.m_x;
 								int absXDiff = xDiff;
@@ -1772,6 +1516,28 @@ bool Board::IsInCheck(const Piece& selectedObject, std::vector<Tile*>& checkers)
 									};
 								}
 								
+								const bool isQueenAttack = pAttackersTile->GetFlags() & (uint32_t)Piece::PieceFlag::Queen;
+
+								if (isQueenAttack)
+								{
+									if (Piece* pKing = pTile->GetPiece())
+									{
+										const std::vector<Tile*>& kingSquares = pKing->GetAttackedTiles();
+										for (Tile* pTmpKingSquare : kingSquares)
+										{
+											// If this king square is visible in the queens attacking list
+											// Incorporate it as an inbetween tile
+											for (Tile* pAttackingList : attackingList)
+											{
+												if (pAttackingList == pTmpKingSquare)
+												{
+													inbetweenTiles.push_back(pTmpKingSquare);
+												}
+											}
+										}
+									}
+								}
+
 								m_checkedMapInterception.emplace(pAttackersTile, inbetweenTiles);								
 								checkers.push_back(pAttackersTile);
 							}
@@ -1845,31 +1611,29 @@ void Board::GenerateCheckList(Piece& selectedObject, const std::vector<Tile*>& c
 						}
 					}
 				}
+			}
+
+			// If we scanned all tiles under threat, and our pValidMove wasn't in there
+			if (isKing && addForKing)
+			{
+				if (numberOfCheckers == 1)
+				{
+					newValidTiles.push_back(pValidMove);
+				}
 				else
 				{
-					addForKing = false;
-				}
-				if (isKing && addForKing)
-				{
-					if (numberOfCheckers == 1)
+					// Ensure Unique - Check aginst ALL Checkers after
+					bool add = true;
+					for (Tile* pPotentials : potentiallyValidTiles)
 					{
-						newValidTiles.push_back(pValidMove);
-					}
-					else
-					{
-						// Ensure Unique - Check aginst ALL Checkers after
-						bool add = true;
-						for (Tile* pPotentials : potentiallyValidTiles)
+						if (pPotentials == pValidMove)
 						{
-							if (pPotentials == pValidMove)
-							{
-								add = false;
-								break;
-							}
+							add = false;
+							break;
 						}
-						if (add)
-							potentiallyValidTiles.push_back(pValidMove);
 					}
+					if (add)
+						potentiallyValidTiles.push_back(pValidMove);
 				}
 			}
 		}
