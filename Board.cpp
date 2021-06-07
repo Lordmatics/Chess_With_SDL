@@ -217,6 +217,7 @@ void Board::GenerateLegalMoves(Piece* pSelectedObject)
 								if (piece.IsCaptured())
 									continue;
 
+								// TODO: Pawns attacking list should not constitue of the double move.
 								const std::vector<Tile*>& attackingList = piece.GetAttackedTiles();
 								for (Tile* pTile : attackingList)
 								{
@@ -1435,13 +1436,13 @@ bool Board::IsInCheck(const Piece& selectedObject, std::vector<Tile*>& checkers)
 									while (kingNotFound)
 									{
 										if (isBishop)
-										{
-											if (ruleID == 1 || ruleID == 2 || ruleID == 6 || ruleID == 7)
+										{											
+											if (ruleID == 3 || ruleID == 4 || ruleID == 5 || ruleID == 0)
 												break;
 										}
 										else if (isRook)
 										{
-											if (ruleID == 3 || ruleID == 4 || ruleID == 5 || ruleID == 0)
+											if (ruleID == 1 || ruleID == 2 || ruleID == 6 || ruleID == 7)
 												break;
 										}
 										Coordinate inBetweenCoord = attackerCoord + (rules[ruleID] * counter++);
