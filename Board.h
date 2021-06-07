@@ -10,7 +10,7 @@
 
 struct SDL_Renderer;
 
-const bool m_disableAI = true;
+const bool m_disableAI = true;// true;
 
 class Board
 {
@@ -70,7 +70,6 @@ public:
 	int EvaluatePosition();
 
 	const std::vector<Tile*>& GetValidTiles() const;
-	void Test();
 
 	Tile* GetTile(int id);
 	void SetPreviouslyMoved(Piece* pSelectedPiece);
@@ -94,6 +93,7 @@ private:
 	std::vector<Tile*> m_queryingTiles;
 	std::vector<Tile*> m_validTiles;
 	std::vector<Tile*> m_checkedTiles;
+	std::vector<Tile*> m_friendlysInSight;
 
 	std::vector<Tile*> m_highlightTiles;
 	Player m_player;
@@ -113,9 +113,12 @@ private:
 	void GenerateCheckList(Piece& pSelectedObject, const std::vector<Tile*>& checkers);
 
 	std::map<Tile*, std::vector<Tile*>> m_checkedMapInterception;
+	ChessUser* GetOpponent(uint32_t flags);
+	
+	bool DoIHaveVisionOn(Tile* pValidMove, const Piece& piece);
 	//void ClearInput();
 public:
-	void RunAI(SDL_Renderer* pRenderer, bool& m_playersTurn);
+	void RunAI(SDL_Renderer* pRenderer);
 };
 
 template<class Function>

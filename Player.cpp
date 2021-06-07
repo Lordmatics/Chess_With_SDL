@@ -105,11 +105,17 @@ void Player::ClearSelection(bool snapToStart /*= true*/)
 	m_restRect.y = 0;
 }
 
-Piece* Player::MakeMove(SDL_Renderer* pRenderer, Tile& tileOnRelease)
+Piece* Player::MakeMove(SDL_Renderer* pRenderer, Tile* tileOnRelease)
 {
 	Board* pBoard = m_pBoard;
 	if (!pBoard)
 	{
+		return nullptr;
+	}
+
+	if (!tileOnRelease)
+	{
+		// Need to have a target square to be valid move
 		return nullptr;
 	}
 
@@ -128,14 +134,14 @@ Piece* Player::MakeMove(SDL_Renderer* pRenderer, Tile& tileOnRelease)
 		{
 			// Don't allow captures of KINGs
 			const bool isOtherTileKing = pOtherTile->GetFlags() & (uint32_t)Piece::PieceFlag::King;
-			return &tileOnRelease == pOtherTile && !isOtherTileKing;
+			return tileOnRelease == pOtherTile && !isOtherTileKing;
 		};
 		if (pBoard->TileMatch(tileMatch, 1))
 		{
 			const bool isAPawn = pSelectedPiece->GetFlags() & (uint32_t)Piece::PieceFlag::Pawn ? true : false;
-			const bool isAPromotionSquare = tileOnRelease.IsPromotionSquare();
+			const bool isAPromotionSquare = tileOnRelease->IsPromotionSquare();
 			bool resultedInCapture = false;
-			if (Piece* pDefender = tileOnRelease.GetPiece())
+			if (Piece* pDefender = tileOnRelease->GetPiece())
 			{
 				// If there is a piece on the tile
 				// Initiate CAPTURE
@@ -153,7 +159,7 @@ Piece* Player::MakeMove(SDL_Renderer* pRenderer, Tile& tileOnRelease)
 			{
 				// If there was no defender, we just moving
 				// TODO: Ensure we not enabling some discovered Checks
-				pSelectedPiece->CheckEnpassant(tileOnRelease, *pBoard);
+				pSelectedPiece->CheckEnpassant(*tileOnRelease, *pBoard);
 				if (isAPawn)
 				{
 					if (isAPromotionSquare)
@@ -163,7 +169,7 @@ Piece* Player::MakeMove(SDL_Renderer* pRenderer, Tile& tileOnRelease)
 				}
 				else
 				{
-					pSelectedPiece->CheckCastling(tileOnRelease, *pBoard);
+					pSelectedPiece->CheckCastling(*tileOnRelease, *pBoard);
 				}
 			}
 
@@ -174,17 +180,18 @@ Piece* Player::MakeMove(SDL_Renderer* pRenderer, Tile& tileOnRelease)
 				pPrevTile->SetPiece(nullptr);
 				m_pSelectedPiecesStartingTile = nullptr;
 			}
-			const Coordinate& releaseCoord = tileOnRelease.GetCoordinate();
+			const Coordinate& releaseCoord = tileOnRelease->GetCoordinate();
 			pSelectedPiece->OnPieceMoved(releaseCoord, resultedInCapture, pBoard->GetTurn());
-			tileOnRelease.SetPiece(pSelectedPiece);
+			tileOnRelease->SetPiece(pSelectedPiece);
 			pBoard->UpdatePieces();
 			pBoard->SetPreviouslyMoved(pSelectedPiece);
 			ClearSelection(false);
 
+			return pSelectedPiece;
 			// TODO: Checks
 			// TODO: Trigger AI
-			bool ismyTurn = IsMyTurn();
-			pBoard->RunAI(pRenderer, ismyTurn);
+			//SetMyTurn(false);			
+			//pBoard->RunAI(pRenderer);
 
 		}
 		else

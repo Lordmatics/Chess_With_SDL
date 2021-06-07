@@ -58,13 +58,8 @@ void GameLoop::ConstructSDL(int w, int h, bool fullscreen)
 		return left < right;
 	};
 	s_tileSize = (int)(std::min(w / 8, h / 8, Pred) * 0.975f); // 8.4375f
-	s_pieceSize = (int)s_tileSize / 1.3f;
-	s_pawnSize = (int)s_tileSize / 1.684210526315789f;
-	//s_pawnOffset = (int)(s_width / 8) / 2.153846153846154f;
-	//s_pieceOffset = (int)s_width / 8 / 3.5f;
-	//const int xOffset = GameLoop::s_width / 4;//  896 / 2; // Quarter X Reso
-	//const int yOffset = (GameLoop::s_height - (tileSize * 9)) / 2;// 28; // Each tile is 128, so 128 * 8 = 1024. reso = 1920:1080, so 1080 - 1024 = 56, then half top/bot, so 28 each side
-	
+	s_pieceSize = (int)(s_tileSize / 1.3f);
+	s_pawnSize = (int)(s_tileSize / 1.684210526315789f);
 	s_xOffset = ((s_width - (8 * s_tileSize)) / 2); // 1920 / 4; = 
 	s_yOffset = ((s_height- (8 * s_tileSize)) / 2); // Creates the gap between top and bottom
 

@@ -47,7 +47,7 @@ public:
 
 	virtual bool DetectChecks();
 
-	virtual Piece* MakeMove(SDL_Renderer* pRenderer, Tile& tileOnRelease) = 0;
+	virtual Piece* MakeMove(SDL_Renderer* pRenderer, Tile* tileOnRelease) = 0;
 
 	const bool IsMyTurn() const { return m_bMyTurn; }
 	void SetMyTurn(bool val) { m_bMyTurn = val; }

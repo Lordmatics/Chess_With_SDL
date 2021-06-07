@@ -46,6 +46,7 @@ bool Board::CheckPiece(const Piece& selectedPiece, const Coordinate& coord)
 			bool targetIsWhite = pPiece->GetFlags() & (uint32_t)Piece::PieceFlag::White;
 			if (targetIsWhite == isWhite)
 			{
+				m_friendlysInSight.push_back(pTile);
 				return false;
 			}
 			else
@@ -110,6 +111,7 @@ void Board::GenerateLegalMoves(Piece* pSelectedObject)
 {
 	m_queryingTiles.clear();
 	m_validTiles.clear();
+	m_friendlysInSight.clear();
 
 	if (!pSelectedObject)
 	{
@@ -308,6 +310,7 @@ void Board::GenerateLegalMoves(Piece* pSelectedObject)
 		}
 	}
 
+	pSelectedObject->UpdateFriendlyTiles(m_friendlysInSight);
 	pSelectedObject->UpdateVisibileTiles(m_queryingTiles);
 	pSelectedObject->UpdateAttackedTiles(m_validTiles);
 }
@@ -381,9 +384,9 @@ void Board::Init(SDL_Renderer* pRenderer)
 		}		
 	}	
 
-	if (!m_playersTurn)
+	if (!m_playersTurn && !m_disableAI)
 	{
-		RunAI(pRenderer, m_playersTurn);
+		RunAI(pRenderer);
 	}
 }
 
@@ -582,6 +585,7 @@ void Board::GenerateLegalPawnMoves(Piece& pSelectedPiece)
 			bool capturable = pSelectedPiece.CanCapture(pTargetPiece);
 			if (!capturable)
 			{
+				m_friendlysInSight.push_back(pQuery);
 				continue;
 			}
 			else
@@ -602,15 +606,15 @@ void Board::GenerateLegalPawnMoves(Piece& pSelectedPiece)
 						targetCoord.m_y -= 1;
 					}
 					bool added = false;
-					for (Tile* pQuery : m_queryingTiles)
+					for (Tile* pQuery2 : m_queryingTiles)
 					{
 						// Look for the query tile above this one
-						Coordinate coord = pQuery->GetCoordinate();
+						Coordinate coord = pQuery2->GetCoordinate();
 						if (coord == targetCoord)
 						{
 							for (Tile* pValid : m_validTiles)
 							{
-								if (pQuery == pValid)
+								if (pQuery2 == pValid)
 								{
 									return;
 								}
@@ -622,7 +626,7 @@ void Board::GenerateLegalPawnMoves(Piece& pSelectedPiece)
 								{
 									// Only allow Enpassant, IF they just moved it
 									// else it becomes an invalid move									 
-									m_validTiles.push_back(pQuery);
+									m_validTiles.push_back(pQuery2);
 									added = true;
 									break;
 								}
@@ -862,6 +866,7 @@ void Board::GenerateLegalBishopMoves(Piece& selectedPiece)
 					if (amWhite == opponentWhite)
 					{
 						bObstructed = true;
+						m_friendlysInSight.push_back(pTile);
 					}
 					else
 					{
@@ -1058,17 +1063,6 @@ const std::vector<Tile*>& Board::GetValidTiles() const
 	return m_validTiles;
 }
 
-void Board::Test()
-{
-	//volatile int i = 5;
-	//auto a = m_queryingTiles;
-
-	//auto b = m_validTiles;
-
-	//volatile int j = 6;
-
-}
-
 Tile* Board::GetTile(int id)
 {
 	if (id >= 0 && id < 64)
@@ -1102,7 +1096,15 @@ void Board::OnLeftClickRelease(SDL_Renderer* pRenderer)
 
 	if (Tile* pTile = GetTileAtPoint(&m_mousePosition))
 	{
-		m_player.MakeMove(pRenderer, *pTile);
+		Piece* pMoved = m_player.MakeMove(pRenderer, pTile);
+		if (pMoved && !m_disableAI)
+		{
+			// Swap Turn
+			m_playersTurn = false;
+			m_player.SetMyTurn(false);
+			m_opponent.SetMyTurn(true);
+			RunAI(pRenderer);
+		}
 	}
 }
 
@@ -1338,6 +1340,22 @@ bool Board::IsInCheck(const Piece& selectedObject, std::vector<Tile*>& checkers)
 								if (!isHorseAttack)
 								{
 									// Deduce COORD Rule Based on positions
+									Coordinate rookRules[4] =
+									{
+										{1,0},
+										{0, 1},
+										{0, -1},
+										{-1, 0}
+									};
+
+									Coordinate bishopRules[4] =
+									{
+										{1, 1}, // 1
+										{1, -1}, // 2
+										{-1, 1}, // 6
+										{ -1, -1} // 7
+									};
+
 									Coordinate rules[8] =
 									{
 										{1,0},
@@ -1349,6 +1367,9 @@ bool Board::IsInCheck(const Piece& selectedObject, std::vector<Tile*>& checkers)
 										{-1, 1},
 										{ -1, -1}
 									};
+
+									const bool isRook = pAttackersTile->GetFlags() & (uint32_t)Piece::PieceFlag::Rook;
+									const bool isBishop = pAttackersTile->GetFlags() & (uint32_t)Piece::PieceFlag::Bishop;
 
 									int ruleID = -1;
 									if (xDiff < 0)
@@ -1413,6 +1434,16 @@ bool Board::IsInCheck(const Piece& selectedObject, std::vector<Tile*>& checkers)
 									int counter = 1;
 									while (kingNotFound)
 									{
+										if (isBishop)
+										{
+											if (ruleID == 1 || ruleID == 2 || ruleID == 6 || ruleID == 7)
+												break;
+										}
+										else if (isRook)
+										{
+											if (ruleID == 3 || ruleID == 4 || ruleID == 5 || ruleID == 0)
+												break;
+										}
 										Coordinate inBetweenCoord = attackerCoord + (rules[ruleID] * counter++);
 										const int inbetweenTileID = GetTileIDFromCoord(inBetweenCoord);
 										if (Tile* pInbetweenTile = GetTile(inbetweenTileID))
@@ -1423,6 +1454,12 @@ bool Board::IsInCheck(const Piece& selectedObject, std::vector<Tile*>& checkers)
 												break;
 											}
 											inbetweenTiles.push_back(pInbetweenTile);
+										}
+
+										if (counter >= 8)
+										{
+											std::cout << "WTF IsInCheck Infinite Loop... exiting" << std::endl;
+											break;
 										}
 									};
 								}
@@ -1472,6 +1509,10 @@ void Board::GenerateCheckList(Piece& selectedObject, const std::vector<Tile*>& c
 	std::vector<Tile*> potentiallyValidTiles;
 	uint32_t flags = selectedObject.GetFlags();
 	const bool isKing = flags & (uint32_t)Piece::PieceFlag::King;
+	ChessUser* pOpponent = GetOpponent(flags);
+	if (!pOpponent)
+		return;
+
 	const int numberOfCheckers = (const int)checkers.size();
 	for (Tile* pChecker : checkers)
 	{
@@ -1525,26 +1566,82 @@ void Board::GenerateCheckList(Piece& selectedObject, const std::vector<Tile*>& c
 			}
 
 			// If we scanned all tiles under threat, and our pValidMove wasn't in there
-			if (isKing && addForKing)
+			if (isKing)
 			{
-				if (numberOfCheckers == 1)
+				// IF Move would CAPTURE the attacker.. also valid
+				if (addForKing)
 				{
-					newValidTiles.push_back(pValidMove);
+					if (numberOfCheckers == 1)
+					{
+						newValidTiles.push_back(pValidMove);
+					}
+					else
+					{
+						// Ensure Unique - Check aginst ALL Checkers after
+						bool add = true;
+						for (Tile* pPotentials : potentiallyValidTiles)
+						{
+							if (pPotentials == pValidMove)
+							{
+								add = false;
+								break;
+							}
+						}
+						if (add)
+							potentiallyValidTiles.push_back(pValidMove);
+					}
 				}
 				else
 				{
-					// Ensure Unique - Check aginst ALL Checkers after
-					bool add = true;
-					for (Tile* pPotentials : potentiallyValidTiles)
+					if (pValidMove == pChecker)
 					{
-						if (pPotentials == pValidMove)
+						// IF King move would capture attacker...
+						// IT most likely is acceptable
+						// Check the capture of this piece doesn't uncover a sneaky check though...
+						bool considerCapture = true;
+						if (Piece* opponentPieces = pOpponent->GetPieces())
 						{
-							add = false;
-							break;
+							for (int i = 0; i < 16 ; i++)
+							{
+								Piece& piece = opponentPieces[i];
+								if(piece.IsCaptured())
+									continue;
+
+								const bool wouldRevealCheck = DoIHaveVisionOn(pValidMove, piece);
+								if (wouldRevealCheck)
+								{
+									// Discount move
+									considerCapture = false;
+									break;
+								}
+							}
+
+							// If you escape the Discovered Check logic...
+							// Promptly consider the move(Capture)
+							if (considerCapture)
+							{
+								if (numberOfCheckers == 1)
+								{
+									newValidTiles.push_back(pValidMove);
+								}
+								else
+								{
+									// Ensure Unique - Check aginst ALL Checkers after
+									bool add = true;
+									for (Tile* pPotentials : potentiallyValidTiles)
+									{
+										if (pPotentials == pValidMove)
+										{
+											add = false;
+											break;
+										}
+									}
+									if (add)
+										potentiallyValidTiles.push_back(pValidMove);
+								}
+							}					
 						}
 					}
-					if (add)
-						potentiallyValidTiles.push_back(pValidMove);
 				}
 			}
 		}
@@ -1607,12 +1704,47 @@ void Board::GenerateCheckList(Piece& selectedObject, const std::vector<Tile*>& c
 	m_validTiles = newValidTiles;
 }
 
+ChessUser* Board::GetOpponent(uint32_t flags)
+{
+	const bool isWhite = flags & (uint32_t)Piece::PieceFlag::White;
+	const bool playerIsWhite = m_player.IsWhite();
+	if (isWhite)
+	{
+		if (playerIsWhite)
+		{
+			return &m_opponent;
+		}
+		return &m_player;
+	}
+	else
+	{
+		if (playerIsWhite)
+		{
+			return &m_player;
+		}
+		return &m_opponent;
+	}
+}
+
+bool Board::DoIHaveVisionOn(Tile* pValidMove, const Piece& piece)
+{
+	const std::vector<Tile*>& friendlies = piece.GetFriendlysInSight();
+	for (Tile* pAttacked : friendlies)
+	{
+		if (pAttacked == pValidMove)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
 //void Board::ClearInput()
 //{
 //	ClearLegalMoves();
 //}
 
-void Board::RunAI(SDL_Renderer* pRenderer, bool& m_playersTurn)
+void Board::RunAI(SDL_Renderer* pRenderer)
 {
 	if (m_disableAI)
 	{
@@ -1620,18 +1752,17 @@ void Board::RunAI(SDL_Renderer* pRenderer, bool& m_playersTurn)
 		return;
 	}
 
-	// Let'see if i'm in check	
 
 	// Refactor AI
-	//if (Piece* pPieceToMove = m_opponent.MakeMove(pRenderer, nullptr))
-	//{
-	//	SetPreviouslyMoved(pPieceToMove);
-	//}
+	if (Piece* pPieceToMove = m_opponent.MakeMove(pRenderer, nullptr))
+	{
+		SetPreviouslyMoved(pPieceToMove);
+	}
 
 	m_playersTurn = true;
-	bool resultedInCheck = m_opponent.DetectChecks();
-	if (resultedInCheck)
-	{
-		volatile int i = 5;
-	}
+	//bool resultedInCheck = m_opponent.DetectChecks();
+	//if (resultedInCheck)
+	//{
+	//	volatile int i = 5;
+	//}
 }

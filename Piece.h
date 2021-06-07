@@ -65,6 +65,7 @@ public:
 	void UpdateVisibileTiles(const std::vector<Tile*>& queryTiles);
 	void UpdateAttackedTiles(const std::vector<Tile*>& attackedTiles);
 	void UpdateCheckedTiles(const std::vector<Tile*>& checkedTiles);
+	void UpdateFriendlyTiles(const std::vector<Tile*>& friendlyTiles);
 	
 	void ClearAttackedTiles();
 	bool IsEnemy(uint32_t param1) const;
@@ -73,7 +74,7 @@ public:
 	const std::vector<Tile*>& GetVisibleTiles() const { return m_visibleTiles; }
 	const std::vector<Tile*>& GetAttackedTiles() const { return m_attackedTiles; }
 	const std::vector<Tile*>& GetCheckingList() const { return m_checkedTiles; }
-
+	const std::vector<Tile*>& GetFriendlysInSight() const { return m_friendlies; }
 	ChessUser* GetOwner() const { return m_pOwner; }
 	bool IsPinning(const Piece& selectedObject, int& numUntilKing);
 private:
@@ -95,7 +96,8 @@ private:
 	std::vector<Tile*> m_attackedTiles;
 	// Essentially a list of every tile this piece can attack in the direction of the check we're creating
 	std::vector<Tile*> m_checkedTiles;
-
+	// Essentially a list of all the ally pieces i can currently 'hit' - To help with calculating KING Captures (Discovered Checks)
+	std::vector<Tile*> m_friendlies;
 	std::string m_pieceInfo;
 public:
 	int GetValue() const;

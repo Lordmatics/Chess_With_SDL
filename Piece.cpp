@@ -641,6 +641,11 @@ void Piece::UpdateCheckedTiles(const std::vector<Tile*>& checkedTiles)
 	m_checkedTiles = checkedTiles;
 }
 
+void Piece::UpdateFriendlyTiles(const std::vector<Tile*>& friendlyTiles)
+{
+	m_friendlies = friendlyTiles;
+}
+
 void Piece::ClearAttackedTiles()
 {
 	m_attackedTiles.clear();
